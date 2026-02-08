@@ -45,37 +45,37 @@ c.drawImage(ImageReader(thumb), x, y - 256, width=64*mm, height=64*mm)
     block_y -= 5*mm
     c.drawString(right_x, block_y, (trend.get('note','')[:120]))
 
-    block_y -= 10*mm
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(right_x, block_y, "Cliché signals")
-    c.setFont("Helvetica", 10)
-    block_y -= 5*mm
-    if not cliches:
-        c.drawString(right_x, block_y, "No strong signals detected (heuristic).")
-        block_y -= 5*mm
-    else:
-        for s in cliches[:5]:
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(right_x, block_y, f"• {s.get('title','')}")
-            block_y -= 4*mm
-            c.setFont("Helvetica", 9)
-            c.drawString(right_x + 3*mm, block_y, s.get("desc","")[:120])
-            block_y -= 5*mm
-
-    y2 = y - 74*mm
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(x, y2, "Semantic check")
-    y2 -= 5*mm
-    c.setFont("Helvetica", 10)
-    if semantic:
-        c.drawString(x, y2, f"Status: {semantic.get('status','')}")
-        y2 -= 5*mm
-        c.drawString(x, y2, semantic.get("note","")[:180])
-    else:
-        c.drawString(x, y2, "Not provided.")
-
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawString(x, 12*mm, "Disclaimer: heuristic diagnostic; not a trademark search; not legal advice.")
-    c.showPage()
-    c.save()
-    return buf.getvalue()
+      block_y -= 10*mm
+      c.setFont("Helvetica-Bold", 12)
+      c.drawString(right_x, block_y, "Cliché signals")
+      c.setFont("Helvetica", 10)
+      block_y -= 5*mm
+      if not cliches:
+          c.drawString(right_x, block_y, "No strong signals detected (heuristic).")
+          block_y -= 5*mm
+      else:
+          for s in cliches[:5]:
+              c.setFont("Helvetica-Bold", 10)
+              c.drawString(right_x, block_y, f"• {s.get('title','')}")
+              block_y -= 4*mm
+              c.setFont("Helvetica", 9)
+              c.drawString(right_x + 3*mm, block_y, s.get("desc","")[:120])
+              block_y -= 5*mm
+  
+      y2 = y - 74*mm
+      c.setFont("Helvetica-Bold", 12)
+      c.drawString(x, y2, "Semantic check")
+      y2 -= 5*mm
+      c.setFont("Helvetica", 10)
+      if semantic:
+          c.drawString(x, y2, f"Status: {semantic.get('status','')}")
+          y2 -= 5*mm
+          c.drawString(x, y2, semantic.get("note","")[:180])
+      else:
+          c.drawString(x, y2, "Not provided.")
+  
+      c.setFont("Helvetica-Oblique", 8)
+      c.drawString(x, 12*mm, "Disclaimer: heuristic diagnostic; not a trademark search; not legal advice.")
+      c.showPage()
+      c.save()
+      return buf.getvalue()
