@@ -1,4 +1,3 @@
-from reportlab.lib.utils import ImageReader
 from __future__ import annotations
 import io
 from typing import Dict, List, Optional
@@ -6,6 +5,7 @@ from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 def make_risk_sheet_pdf(
     logo_img: Image.Image,
