@@ -1,4 +1,4 @@
-
+from reportlab.lib.utils import ImageReader
 from __future__ import annotations
 import io
 from typing import Dict, List, Optional
@@ -28,14 +28,11 @@ def make_risk_sheet_pdf(logo_img: Image.Image, category: str, similarity: float,
     if best_match_name:
         c.drawString(x, y, f"Best match file: {best_match_name}")
         y -= 5 * mm
+thumb = logo_img.convert("RGBA").resize((256, 256)).convert("RGB")
 
-    thumb = logo_img.convert("RGBA").resize((256, 256))
-    img_buf = io.BytesIO()
-    thumb.save(img_buf, format="PNG")
-    img_buf.seek(0)
+y -= 3 * mm
+c.drawImage(ImageReader(thumb), x, y - 256, width=64*mm, height=64*mm)
 
-    y -= 3 * mm
-    c.drawInlineImage(img_buf, x, y - 256, width=64*mm, height=64*mm)
 
     right_x = x + 70*mm
     block_y = y
