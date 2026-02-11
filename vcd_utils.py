@@ -226,3 +226,32 @@ def load_reference_features(data_dir: str, category: str):
         except Exception:
             continue
     return feats, names
+import os
+import requests
+
+SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+
+def serpapi_reverse_image_search(image_url: str, num: int = 20):
+    params = {
+        "engine": "google_lens",
+        "url": image_url,
+        "api_key": SERPAPI_KEY,
+        "hl": "en",
+        "num": num,
+    }
+
+    r = requests.get("https://serpapi.com/search.json", params=params, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+
+    results = []
+
+    for item in data.get("visual_matches", [])[:num]:
+        results.append({
+            "title": item.get("title", ""),
+            "link": item.get("link", ""),
+            "thumbnail": item.get("thumbnail", ""),
+            "source": item.get("source", ""),
+        })
+
+    return results
