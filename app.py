@@ -2,7 +2,8 @@
 import os
 import streamlit as st
 from vcd_utils import (CATEGORIES, load_image, extract_features, load_reference_features,
-                       similarity_to_set, detect_cliches, trend_risk, semantic_mismatch)
+                       similarity_to_set, detect_cliches, trend_risk, semantic_mismatch,
+                       world_scan)
 from pdf_utils import make_risk_sheet_pdf
 
 APP_TITLE = "Visual Cliché Detector (MVP)"
@@ -21,6 +22,8 @@ with colL:
     category = st.selectbox("Category context", options=CATEGORIES, index=0)
     extra_cat = st.selectbox("Optional second context", options=["—"] + CATEGORIES, index=0)
     keywords = st.text_input("Positioning keywords (comma-separated, optional)", placeholder="human, warm, bold")
+    world_on = st.checkbox("World scan (web)", value=False)
+    world_k = st.slider("How many results", 3, 15, 8) if world_on else 0
     st.markdown("---")
     st.subheader("Reference set")
     st.write("Put reference logos into: `data/<category>/` to power similarity.")
@@ -36,6 +39,10 @@ with colR:
             st.image(img, caption="Uploaded mark", width=260)
 
             f = extract_features(img)
+            world_results = []
+if world_on:
+    world_results = world_scan(img, max_results=world_k)
+
             refs1, ref_names1 = load_reference_features(data_dir, category)
             sim1, best_i1 = similarity_to_set(f, refs1)
             best_name1 = ref_names1[best_i1] if (best_i1 is not None and best_i1 < len(ref_names1)) else None
