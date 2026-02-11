@@ -57,17 +57,17 @@ if world_on:
             st.markdown("### Similarity")
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
-                st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/…")
-    if world_on:
-      st.markdown("### 🌍 World scan (web)")
-      if not world_results:
-        st.info("No web matches found or API not configured.")
-      else:
-        for r in world_results:
-          st.markdown(f"**{r.get('title','')}**")
-          st.write(r.get("link",""))
-          st.write(f"Similarity: {r.get('score',0):.1f}%")
-          st.markdown("---")
+                  st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/…")
+                if world_on:
+          st.markdown("### 🌍 World scan (web)")
+          if not world_results:
+            st.info("No web matches found or API not configured.")
+          else:
+            for r in world_results:
+              st.markdown(f"**{r.get('title','')}**")
+              st.write(r.get("link",""))
+              st.write(f"Similarity: {r.get('score',0):.1f}%")
+              st.markdown("---")
 
             st.markdown("### Cliché signals")
             cliches = detect_cliches(f)
