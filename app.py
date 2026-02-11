@@ -31,45 +31,58 @@ with colL:
 
 with colR:
     st.subheader("Report")
+
     if not up:
         st.info("Upload a mark to start. If SVG fails on cloud, upload PNG/JPG (export from Illustrator/Corel/etc.).")
+
     elif run:
         try:
             img = load_image(up.getvalue(), up.name)
             st.image(img, caption="Uploaded mark", width=260)
 
             f = extract_features(img)
-            world_results = []
-if world_on:
-    world_results = world_scan(img, max_results=world_k)
 
+            # --- World scan (web) ---
+            world_results = []
+            if world_on:
+                world_results = world_scan(img, max_results=world_k)
+
+            # --- Similarity vs local reference sets ---
             refs1, ref_names1 = load_reference_features(data_dir, category)
             sim1, best_i1 = similarity_to_set(f, refs1)
             best_name1 = ref_names1[best_i1] if (best_i1 is not None and best_i1 < len(ref_names1)) else None
 
             sims = [(category, sim1, best_name1)]
-            if extra_cat != "—":
+
+            if extra_cat != "--":
                 refs2, ref_names2 = load_reference_features(data_dir, extra_cat)
                 sim2, best_i2 = similarity_to_set(f, refs2)
                 best_name2 = ref_names2[best_i2] if (best_i2 is not None and best_i2 < len(ref_names2)) else None
                 sims.append((extra_cat, sim2, best_name2))
 
-            st.markdown("### Similarity")
+            st.markdown("## Similarity")
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
-                  st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/…")
-                if world_on:
-          st.markdown("### 🌍 World scan (web)")
-          if not world_results:
-            st.info("No web matches found or API not configured.")
-          else:
-            for r in world_results:
-              st.markdown(f"**{r.get('title','')}**")
-              st.write(r.get("link",""))
-              st.write(f"Similarity: {r.get('score',0):.1f}%")
-              st.markdown("---")
+                st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
 
-            st.markdown("### Cliché signals")
+            # --- Show World scan results ---
+            if world_on:
+                st.markdown("## 🌍 World scan (web)")
+                if not world_results:
+                    st.info("No web matches found or API not configured.")
+                else:
+                    for r in world_results:
+                        title = r.get("title", "")
+                        link = r.get("link", "")
+                        score = r.get("score", 0.0)
+
+                        st.markdown(f"**{title}**" if title else "**Result**")
+                        if link:
+                            st.write(link)
+                        st.write(f"Similarity: {score:.1f}%")
+                        st.markdown("---")
+
+            st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
             if not cliches:
                 st.success("No strong cliché signals detected (heuristic).")
@@ -79,12 +92,12 @@ if world_on:
                         st.write(s["desc"])
                         st.caption(f"Common in: {s['common_in']}")
 
-            st.markdown("### Trend risk")
+            st.markdown("## Trend risk")
             tr = trend_risk(f)
             st.write(f"**Status:** {tr['status']}")
             st.write(tr["note"])
 
-            st.markdown("### Semantic check")
+            st.markdown("## Semantic check")
             kw = [k.strip() for k in keywords.split(",")] if keywords else []
             sem = semantic_mismatch(f, kw)
             if sem:
@@ -93,9 +106,22 @@ if world_on:
             else:
                 st.caption("No positioning keywords provided.")
 
-            st.markdown("---")
-            st.subheader("Export")
-            pdf_bytes = make_risk_sheet_pdf(img, category, sim1, best_name1, cliches, tr, sem)
-            st.download_button("Download PDF Risk Sheet", data=pdf_bytes, file_name="risk_sheet.pdf", mime="application/pdf")
+            st.markdown("## Export")
+            pdf_bytes = make_risk_sheet_pdf(
+                logo_img=img,
+                category=category,
+                similarity=sim1,
+                best_match_name=best_name1,
+                cliches=cliches,
+                trend=tr,
+                semantic=sem,
+            )
+            st.download_button(
+                "Download PDF Risk Sheet",
+                data=pdf_bytes,
+                file_name="risk_sheet.pdf",
+                mime="application/pdf",
+            )
+
         except Exception as e:
-            st.error(f"Failed to analyze: {e}")
+            st.error(f"Error: {e}")
