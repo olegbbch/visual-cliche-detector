@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 import io, os, math
+import requests
+from urllib.parse import quote_plus
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 
@@ -255,3 +257,43 @@ def serpapi_reverse_image_search(image_url: str, num: int = 20):
         })
 
     return results
+    def world_scan(query: str, num_results: int = 10) -> list[dict]:
+    """
+    World scan via SerpAPI (Google Images).
+    Returns a list of {title, source, link, thumbnail}.
+    Requires SERPAPI_KEY in env (Streamlit Secrets).
+    """
+    api_key = os.getenv("SERPAPI_KEY", "").strip()
+    if not api_key:
+        return [{"title": "Missing SERPAPI_KEY in environment/secrets", "source": "config", "link": "", "thumbnail": ""}]
+
+    q = query.strip()
+    if not q:
+        return []
+
+    # Google Images via SerpAPI
+    url = "https://serpapi.com/search.json"
+    params = {
+        "engine": "google_images",
+        "q": q,
+        "api_key": api_key,
+        "num": int(num_results),
+    }
+
+    try:
+        r = requests.get(url, params=params, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return [{"title": f"World scan error: {e}", "source": "serpapi", "link": "", "thumbnail": ""}]
+
+    out = []
+    for item in (data.get("images_results") or [])[: int(num_results)]:
+        out.append({
+            "title": item.get("title", ""),
+            "source": item.get("source", ""),
+            "link": item.get("link", ""),
+            "thumbnail": item.get("thumbnail", ""),
+        })
+    return out
+
