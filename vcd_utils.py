@@ -257,3 +257,59 @@ def serpapi_reverse_image_search(image_url: str, num: int = 20):
         })
 
     return results
+def world_scan(img, max_results: int = 8) -> list[dict]:
+    """
+    World scan via SerpAPI (Google Lens).
+    Returns list of {title, link, score}.
+    Needs SERPAPI_KEY in env (Streamlit Secrets).
+    """
+    api_key = os.getenv("SERPAPI_KEY", "").strip()
+    if not api_key:
+        return []
+
+    # Convert PIL image to bytes (PNG)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    image_bytes = buf.getvalue()
+
+    # Upload to Cloudinary (unsigned)
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+    upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "").strip()
+    if not cloud_name or not upload_preset:
+        return []
+
+    upload_url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+    files = {"file": ("image.png", image_bytes, "image/png")}
+    data = {"upload_preset": upload_preset}
+
+    r = requests.post(upload_url, files=files, data=data, timeout=30)
+    r.raise_for_status()
+    image_url = r.json().get("secure_url", "")
+    if not image_url:
+        return []
+
+    # SerpAPI Google Lens
+    params = {
+        "engine": "google_lens",
+        "url": image_url,
+        "api_key": api_key,
+    }
+    rr = requests.get("https://serpapi.com/search.json", params=params, timeout=30)
+    rr.raise_for_status()
+    j = rr.json()
+
+    out = []
+    # Try common result buckets
+    items = []
+    if isinstance(j.get("visual_matches"), list):
+        items = j["visual_matches"]
+    elif isinstance(j.get("inline_images"), list):
+        items = j["inline_images"]
+
+    for it in items[:max_results]:
+        title = it.get("title", "") or it.get("source", "") or "Result"
+        link = it.get("link", "") or it.get("source", "")
+        score = it.get("score", 0.0)
+        out.append({"title": title, "link": link, "score": score})
+
+    return out
