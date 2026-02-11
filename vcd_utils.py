@@ -296,4 +296,98 @@ def serpapi_reverse_image_search(image_url: str, num: int = 20):
             "thumbnail": item.get("thumbnail", ""),
         })
     return out
+    # ----------------------------
+# World scan (web) via SerpApi + Cloudinary unsigned upload
+# ----------------------------
+import os
+import base64
+
+def _cloudinary_unsigned_upload(image_bytes: bytes, filename: str = "logo.png") -> str | None:
+    """
+    Uploads bytes to Cloudinary using unsigned upload preset.
+    Returns secure_url or None.
+    """
+    try:
+        import requests
+    except Exception:
+        return None
+
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+    upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "").strip()
+
+    if not cloud_name or not upload_preset:
+        return None
+
+    url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+
+    # Cloudinary accepts file as data URI or as multipart file.
+    b64 = base64.b64encode(image_bytes).decode("utf-8")
+    data_uri = f"data:image/png;base64,{b64}"
+
+    data = {
+        "file": data_uri,
+        "upload_preset": upload_preset,
+    }
+
+    try:
+        r = requests.post(url, data=data, timeout=30)
+        if r.status_code != 200:
+            return None
+        j = r.json()
+        return j.get("secure_url") or j.get("url")
+    except Exception:
+        return None
+
+
+def world_scan(img, max_results: int = 8):
+    """
+    Returns list of dicts: [{title, link, score}]
+    Uses SerpApi Google Reverse Image (engine=google_reverse_image).
+    """
+    try:
+        import requests
+    except Exception:
+        return []
+
+    api_key = os.getenv("SERPAPI_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    # Convert PIL image -> bytes (PNG)
+    try:
+        import io
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        image_bytes = buf.getvalue()
+    except Exception:
+        return []
+
+    image_url = _cloudinary_unsigned_upload(image_bytes, filename="logo.png")
+    if not image_url:
+        return []
+
+    params = {
+        "engine": "google_reverse_image",
+        "api_key": api_key,
+        "image_url": image_url,
+    }
+
+    try:
+        resp = requests.get("https://serpapi.com/search.json", params=params, timeout=45)
+        if resp.status_code != 200:
+            return []
+        data = resp.json()
+    except Exception:
+        return []
+
+    items = data.get("image_results") or []
+    out = []
+    for it in items[:max_results]:
+        out.append({
+            "title": it.get("title") or "",
+            "link": it.get("link") or it.get("redirect_link") or "",
+            "score": float(it.get("position", 0)),  # position as proxy (0..)
+        })
+    return out
+
 
