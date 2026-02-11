@@ -1,17 +1,8 @@
 import os
 import streamlit as st
 
-from vcd_utils import (
-    CATEGORIES,
-    load_image,
-    extract_features,
-    load_reference_features,
-    similarity_to_set,
-    detect_cliches,
-    trend_risk,
-    semantic_mismatch,
-    world_scan,
-)
+from vcd_utils import CATEGORIES, load_image, extract_features, load_reference_features, similarity_to_set, detect_cliches, trend_risk, semantic_mismatch, world_scan
+
 
 from pdf_utils import make_risk_sheet_pdf
 
