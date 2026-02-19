@@ -72,7 +72,7 @@ with colR:
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
                 st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
-                            def proximity_label(score):
+def proximity_label(score):
                 try:
                     s = float(score)
                 except Exception:
