@@ -82,16 +82,18 @@ with colR:
 
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
-                else:
-    cols = st.columns(3, gap="medium")
+                                else:
+                    cols = st.columns(3, gap="medium")
 
-    for i, r in enumerate(world_results[:3]):
-        with cols[i % 3]:
-            thumb = r.get("thumbnail", "")
-            title = r.get("title", "") or "Result"
+                    for i, r in enumerate(world_results[:3]):
+                        with cols[i % 3]:
+                            thumb = r.get("thumbnail", "")
+                            title = r.get("title", "") or "Result"
 
-            if thumb:
-                st.image(thumb, use_container_width=True)
+                            if thumb:
+                                st.image(thumb, use_container_width=True)
+
+                            st.caption(title)
 
             st.caption(title)
 
