@@ -83,13 +83,17 @@ with colR:
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
                 else:
-                    for r in world_results:
-                        title = r.get("title", "") or "Result"
-                        link = r.get("link", "")
-                        st.markdown(f"**{title}**")
-                        if link:
-                            st.write(link)
-                        st.markdown("---")
+    cols = st.columns(3, gap="medium")
+
+    for i, r in enumerate(world_results[:3]):
+        with cols[i % 3]:
+            thumb = r.get("thumbnail", "")
+            title = r.get("title", "") or "Result"
+
+            if thumb:
+                st.image(thumb, use_container_width=True)
+
+            st.caption(title)
 
             st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
