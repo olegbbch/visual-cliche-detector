@@ -299,6 +299,7 @@ def world_scan(img, max_results: int = 8) -> list[dict]:
     j = rr.json()
 
     out = []
+
     # Try common result buckets
     items = []
     if isinstance(j.get("visual_matches"), list):
@@ -306,19 +307,16 @@ def world_scan(img, max_results: int = 8) -> list[dict]:
     elif isinstance(j.get("inline_images"), list):
         items = j["inline_images"]
 
-      for it in items[:max_results]:
+    for it in items[:max_results]:
         title = it.get("title", "") or it.get("source", "") or "Result"
         link = it.get("link", "") or it.get("source", "")
 
-        thumb = None
-        if isinstance(it.get("thumbnail"), str):
-            thumb = it.get("thumbnail")
-        elif isinstance(it.get("thumbnail_url"), str):
-            thumb = it.get("thumbnail_url")
-        elif isinstance(it.get("image"), str):
-            thumb = it.get("image")
-        elif isinstance(it.get("image_url"), str):
-            thumb = it.get("image_url")
+        thumb = (
+            it.get("thumbnail")
+            or it.get("thumbnail_url")
+            or it.get("image")
+            or it.get("image_url")
+        )
 
         score = it.get("score", 0.0)
 
