@@ -307,9 +307,10 @@ def world_scan(img, max_results: int = 8) -> list[dict]:
         items = j["inline_images"]
 
     for it in items[:max_results]:
-        title = it.get("title", "") or it.get("source", "") or "Result"
-        link = it.get("link", "") or it.get("source", "")
-        score = it.get("score", 0.0)
-        out.append({"title": title, "link": link, "score": score})
+    title = it.get("title", "") or it.get("source", "") or "Result"
+    link = it.get("link", "") or it.get("source", "")
+    thumb = it.get("thumbnail") or it.get("thumbnail_url") or it.get("image") or it.get("image_url")
+    score = it.get("score", 0.0)
+    out.append({"title": title, "link": link, "score": score, "thumbnail": thumb})
 
     return out
