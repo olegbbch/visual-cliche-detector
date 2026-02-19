@@ -82,7 +82,7 @@ with colR:
 
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
-                                else:
+                else:
                     cols = st.columns(3, gap="medium")
 
                     for i, r in enumerate(world_results[:3]):
