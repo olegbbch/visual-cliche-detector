@@ -76,6 +76,8 @@ with colR:
             # --- Show World scan results ---
             if world_on:
                 st.markdown("## 🌐 World scan (web)")
+                    with st.expander("debug: world_results raw"):
+                st.write(world_results)
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
                 else:
