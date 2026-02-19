@@ -6,6 +6,31 @@ from vcd_utils import CATEGORIES, load_image, extract_features, load_reference_f
 
 from pdf_utils import make_risk_sheet_pdf
 
+def proximity_label(score):
+    try:
+        s = float(score)
+    except Exception:
+        return "Unknown"
+
+    if s <= 0:
+        return "Unknown"
+
+    if s <= 1.0:
+        if s >= 0.85:
+            return "Critical"
+        if s >= 0.70:
+            return "High"
+        if s >= 0.55:
+            return "Moderate"
+        return "Low"
+
+    if s >= 85:
+        return "Critical"
+    if s >= 70:
+        return "High"
+    if s >= 55:
+        return "Moderate"
+    return "Low"
 APP_TITLE = "Visual Cliché Detector (MVP)"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -72,31 +97,6 @@ with colR:
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
                 st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
-def proximity_label(score):
-                try:
-                    s = float(score)
-                except Exception:
-                    return "Unknown"
-
-                if s <= 0:
-                    return "Unknown"
-
-                if s <= 1.0:
-                    if s >= 0.85:
-                        return "Critical"
-                    if s >= 0.70:
-                        return "High"
-                    if s >= 0.55:
-                        return "Moderate"
-                    return "Low"
-
-                if s >= 85:
-                    return "Critical"
-                if s >= 70:
-                    return "High"
-                if s >= 55:
-                    return "Moderate"
-                return "Low"
 
 
                         # --- Show World scan results ---
