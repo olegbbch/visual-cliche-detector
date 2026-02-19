@@ -72,6 +72,32 @@ with colR:
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
                 st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
+                            def proximity_label(score):
+                try:
+                    s = float(score)
+                except Exception:
+                    return "Unknown"
+
+                if s <= 0:
+                    return "Unknown"
+
+                if s <= 1.0:
+                    if s >= 0.85:
+                        return "Critical"
+                    if s >= 0.70:
+                        return "High"
+                    if s >= 0.55:
+                        return "Moderate"
+                    return "Low"
+
+                if s >= 85:
+                    return "Critical"
+                if s >= 70:
+                    return "High"
+                if s >= 55:
+                    return "Moderate"
+                return "Low"
+
 
                         # --- Show World scan results ---
             if world_on:
@@ -79,7 +105,6 @@ with colR:
 
                 with st.expander("debug: world_results raw"):
                     st.write(world_results)
-
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
                 else:
@@ -89,13 +114,14 @@ with colR:
                         with cols[i % 3]:
                             thumb = r.get("thumbnail", "")
                             title = r.get("title", "") or "Result"
+                            score = r.get("score", 0)
+                            label = proximity_label(score)
 
                             if thumb:
                                 st.image(thumb, use_container_width=True)
 
                             st.caption(title)
-
-            st.caption(title)
+                            st.caption(f"Proximity: **{label}**")
 
             st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
