@@ -73,11 +73,13 @@ with colR:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
                 st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
 
-            # --- Show World scan results ---
+                        # --- Show World scan results ---
             if world_on:
                 st.markdown("## 🌐 World scan (web)")
-                    with st.expander("debug: world_results raw"):
-                st.write(world_results)
+
+                with st.expander("debug: world_results raw"):
+                    st.write(world_results)
+
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
                 else:
