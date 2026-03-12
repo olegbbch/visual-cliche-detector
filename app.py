@@ -97,6 +97,12 @@ with colR:
             for cat, sim, best in sims:
                 st.metric(label=f"{cat}", value=f"{sim:.1f}%")
                 st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
+                            st.markdown("## Early warning")
+
+            if world_on and world_results:
+                st.warning("⚠️ Designer, be careful\n\nSimilar visual marks were found online.")
+            else:
+                st.success("✅ Looks safe\n\nNo strong visual similarities detected.")
 
 
                         # --- Show World scan results ---
