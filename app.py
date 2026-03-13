@@ -69,7 +69,7 @@ with colR:
         st.info("Upload a mark to start. If SVG fails on cloud, upload PNG/JPG (export from Illustrator/Corel/etc.).")
     elif run:
         try:
-            img = load_image(up.getvalue(), up.name)
+                        img = load_image(up.getvalue(), up.name)
             st.image(img, caption="Uploaded mark", width=260)
 
             f = extract_features(img)
@@ -93,24 +93,24 @@ with colR:
                 best_name2 = ref_names2[best_i2] if (best_i2 is not None and best_i2 < len(ref_names2)) else None
                 sims.append((extra_cat, sim2, best_name2))
 
-            st.markdown("## Similarity")
-            for cat, sim, best in sims:
-                st.metric(label=f"{cat}", value=f"{sim:.1f}%")
-                st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
-                            st.markdown("## Early warning")
-
+            st.markdown("## Early warning")
             if world_on and world_results:
                 st.warning("⚠️ Designer, be careful\n\nSimilar visual marks were found online.")
             else:
                 st.success("✅ Looks safe\n\nNo strong visual similarities detected.")
 
+            st.markdown("## Similarity")
+            for cat, sim, best in sims:
+                st.metric(label=f"{cat}", value=f"{sim:.1f}%")
+                st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
 
-                        # --- Show World scan results ---
+            # --- Show World scan results ---
             if world_on:
                 st.markdown("## 🌐 World scan (web)")
 
                 with st.expander("debug: world_results raw"):
                     st.write(world_results)
+
                 if not world_results:
                     st.info("No web matches found (or API not configured / Cloudinary upload failed).")
                 else:
