@@ -1,5 +1,6 @@
 import io
 import os
+import re
 
 import requests
 import streamlit as st
@@ -31,22 +32,83 @@ def proximity_label(sim_pct):
     return "Low"
 
 
+def title_is_noise(title: str, link: str) -> bool:
+    text = f"{title} {link}".lower()
+
+    noisy_terms = [
+        "youtube",
+        "how to",
+        "tutorial",
+        "exercise",
+        "squat",
+        "flexibility",
+        "lyrics",
+        "song",
+        "video",
+        "pinterest",
+        "reddit",
+        "tiktok",
+        "facebook",
+        "instagram",
+        "shutterstock",
+        "freepik",
+        "clipart",
+        "drawing",
+        "sketch",
+        "doodle",
+        "cartoon",
+        "illustration",
+        "meme",
+        "wallpaper",
+    ]
+
+    return any(term in text for term in noisy_terms)
+
+
+def title_is_logo_like(title: str, link: str) -> bool:
+    text = f"{title} {link}".lower()
+
+    logo_terms = [
+        "logo",
+        "brand",
+        "branding",
+        "identity",
+        "company",
+        "official",
+        "inc",
+        "ltd",
+        "llc",
+        "group",
+        "studio",
+        "agency",
+        "services",
+        "hospitality",
+        "design",
+    ]
+
+    return any(term in text for term in logo_terms)
+
+
 def warning_state(matches):
     """
-    Decide overall report status from proximity-rich matches.
     Rules:
-    - High if there is at least 1 High match
-    - Mixed if there are 2+ Medium matches, or 1 Medium
+    - Only logo-like / non-noisy results count toward warning
+    - High warning only if 1+ High relevant match
+    - Mixed if 2+ Medium relevant matches
     - Safe otherwise
     """
-    highs = sum(1 for m in matches if m.get("label") == "High")
-    mediums = sum(1 for m in matches if m.get("label") == "Medium")
+    relevant = [
+        m for m in matches
+        if not m.get("is_noise", False)
+        and (m.get("is_logo_like", False) or m.get("label") == "High")
+    ]
+
+    highs = sum(1 for m in relevant if m.get("label") == "High")
+    mediums = sum(1 for m in relevant if m.get("label") == "Medium")
 
     if highs >= 1:
         return "high"
     if mediums >= 2:
-        return "mixed"
-    if mediums == 1:
         return "mixed"
     return "safe"
 
@@ -74,6 +136,8 @@ def build_match_data(result, uploaded_features):
             sim_pct, _ = similarity_to_set(uploaded_features, [tf])
 
     label = proximity_label(sim_pct if sim_pct is not None else 0)
+    is_noise = title_is_noise(title, link)
+    is_logo_like = title_is_logo_like(title, link)
 
     return {
         "thumb": thumb,
@@ -81,6 +145,8 @@ def build_match_data(result, uploaded_features):
         "link": link,
         "sim_pct": sim_pct,
         "label": label,
+        "is_noise": is_noise,
+        "is_logo_like": is_logo_like,
     }
 
 
@@ -94,6 +160,11 @@ def render_match_card(match):
         st.caption(f"Proximity: **{match['label']}**")
     else:
         st.caption(f"Proximity: **{match['label']}** ({match['sim_pct']:.0f}%)")
+
+    if match["is_noise"]:
+        st.caption("Type: weak / noisy match")
+    elif match["is_logo_like"]:
+        st.caption("Type: logo-like match")
 
     if match["link"]:
         st.markdown(f"[Source]({match['link']})")
@@ -156,15 +227,15 @@ with colR:
             st.markdown("## Early warning")
             if state == "high":
                 st.warning(
-                    "⚠️ Designer, be careful\n\nStrong visual overlap was found online."
+                    "⚠️ Designer, be careful\n\nStrong logo-like visual overlap was found online."
                 )
             elif state == "mixed":
                 st.info(
-                    "🟡 Mixed signal\n\nSome loose visual matches were found. Review manually."
+                    "🟡 Mixed signal\n\nSome potentially relevant visual matches were found. Review manually."
                 )
             else:
                 st.success(
-                    "✅ Looks safe\n\nNo meaningful visual conflicts found."
+                    "✅ Looks safe\n\nNo meaningful logo-like visual conflicts found."
                 )
 
             st.markdown("## 🌐 World scan (web)")
