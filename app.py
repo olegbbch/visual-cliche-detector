@@ -1,43 +1,47 @@
+import io
 import os
+
+import numpy as np
+import requests
 import streamlit as st
+from PIL import Image
 
 from vcd_utils import (
     CATEGORIES,
-    load_image,
-    extract_features,
     detect_cliches,
-    trend_risk,
+    extract_features,
+    load_image,
     semantic_mismatch,
+    trend_risk,
     world_scan,
 )
 from pdf_utils import make_risk_sheet_pdf
 
 
-def proximity_label(score):
+def proximity_label(sim_pct):
     try:
-        s = float(score)
+        s = float(sim_pct)
     except Exception:
         return "Unknown"
 
-    if s <= 0:
+    if s < 0:
         return "Unknown"
-
-    if s <= 1.0:
-        if s >= 0.85:
-            return "Critical"
-        if s >= 0.70:
-            return "High"
-        if s >= 0.55:
-            return "Moderate"
-        return "Low"
-
-    if s >= 85:
-        return "Critical"
-    if s >= 70:
+    if s >= 75:
         return "High"
     if s >= 55:
-        return "Moderate"
+        return "Medium"
     return "Low"
+
+
+@st.cache_data(show_spinner=False)
+def thumb_features(url: str):
+    try:
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        im = Image.open(io.BytesIO(r.content)).convert("RGBA")
+        return extract_features(im)
+    except Exception:
+        return None
 
 
 APP_TITLE = "Visual Cliché Detector (MVP)"
@@ -58,18 +62,18 @@ with colL:
     st.subheader("Input")
     up = st.file_uploader(
         "Upload logo mark (SVG/PNG/JPG)",
-        type=["svg", "png", "jpg", "jpeg", "webp"]
+        type=["svg", "png", "jpg", "jpeg", "webp"],
     )
 
     category = st.selectbox("Category context", options=CATEGORIES, index=0)
     extra_cat = st.selectbox("Optional second context", options=["-"] + CATEGORIES, index=0)
     keywords = st.text_input(
         "Positioning keywords (comma-separated, optional)",
-        placeholder="human, warm, bold"
+        placeholder="human, warm, bold",
     )
 
     world_on = True
-    world_k = st.slider("How many web matches?", 3, 15, 8)
+    world_k = st.slider("How many web matches?", 3, 15, 5)
 
     st.markdown("---")
     run = st.button("Analyze", type="primary", disabled=(up is None))
@@ -109,15 +113,27 @@ with colR:
                         with cols[i % 3]:
                             thumb = r.get("thumbnail", "")
                             title = r.get("title", "") or "Result"
-                            score = r.get("score", 0)
-                            label = proximity_label(score)
                             link = r.get("link", "")
+
+                            sim_pct = None
+                            if thumb:
+                                tf = thumb_features(thumb)
+                                if tf is not None:
+                                    a = np.array(f).reshape(-1)
+                                    b = np.array(tf).reshape(-1)
+                                    denom = (np.linalg.norm(a) * np.linalg.norm(b)) or 1.0
+                                    sim_pct = float(np.dot(a, b) / denom) * 100.0
 
                             if thumb:
                                 st.image(thumb, use_container_width=True)
 
+                            label = proximity_label(sim_pct if sim_pct is not None else -1)
+
                             st.caption(title)
-                            st.caption(f"Proximity: **{label}**")
+                            if sim_pct is None:
+                                st.caption(f"Proximity: **{label}**")
+                            else:
+                                st.caption(f"Proximity: **{label}** ({sim_pct:.0f}%)")
 
                             if link:
                                 st.markdown(f"[Source]({link})")
