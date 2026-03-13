@@ -1,7 +1,6 @@
 import io
 import os
 
-import numpy as np
 import requests
 import streamlit as st
 from PIL import Image
@@ -12,6 +11,7 @@ from vcd_utils import (
     extract_features,
     load_image,
     semantic_mismatch,
+    similarity_to_set,
     trend_risk,
     world_scan,
 )
@@ -60,6 +60,7 @@ colL, colR = st.columns([1, 2], gap="large")
 
 with colL:
     st.subheader("Input")
+
     up = st.file_uploader(
         "Upload logo mark (SVG/PNG/JPG)",
         type=["svg", "png", "jpg", "jpeg", "webp"],
@@ -119,10 +120,7 @@ with colR:
                             if thumb:
                                 tf = thumb_features(thumb)
                                 if tf is not None:
-                                    a = np.array(f).reshape(-1)
-                                    b = np.array(tf).reshape(-1)
-                                    denom = (np.linalg.norm(a) * np.linalg.norm(b)) or 1.0
-                                    sim_pct = float(np.dot(a, b) / denom) * 100.0
+                                    sim_pct, _ = similarity_to_set(f, [tf])
 
                             if thumb:
                                 st.image(thumb, use_container_width=True)
