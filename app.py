@@ -48,6 +48,7 @@ def title_is_noise(title: str, link: str) -> bool:
         "tutorial", "how to", "exercise", "lyrics", "song", "video",
         "drawing", "sketch", "doodle", "cartoon", "illustration", "wallpaper",
         "squat", "flexibility", "coloring", "printable", "svg download",
+        "stitch guide", "diagram", "schematic", "process", "step by step",
     ]
 
     noisy_domains = [
@@ -116,7 +117,6 @@ def build_match_data(result, uploaded_features):
     is_noise = title_is_noise(title, link)
     is_logo_like = title_is_logo_like(title, link)
 
-    # Only brand/logo-like results should be considered meaningful.
     is_relevant = (not is_noise) and is_logo_like
 
     return {
@@ -160,13 +160,6 @@ def render_match_card(match):
         st.caption(f"Proximity: **{match['label']}**")
     else:
         st.caption(f"Proximity: **{match['label']}** ({match['sim_pct']:.0f}%)")
-
-    if match["is_noise"]:
-        st.caption("Type: noisy / generic image")
-    elif match["is_relevant"]:
-        st.caption("Type: logo-like match")
-    else:
-        st.caption("Type: weak / unclear source")
 
     if match["link"]:
         st.markdown(f"[Source]({match['link']})")
@@ -224,6 +217,7 @@ with colR:
                     world_results = world_scan(img, max_results=world_k)
 
             match_data = [build_match_data(r, f) for r in world_results]
+            relevant_matches = [m for m in match_data if m.get("is_relevant", False)]
             state = warning_state(match_data)
 
             st.markdown("## Early warning")
@@ -237,15 +231,15 @@ with colR:
                 )
             else:
                 st.success(
-                    "✅ Looks safe\n\nNo meaningful logo-like visual conflicts found."
+                    "✅ Looks safe\n\nNo meaningful logo-like matches found online."
                 )
 
             st.markdown("## 🌐 World scan (web)")
-            if not match_data:
-                st.info("No web matches found.")
+            if not relevant_matches:
+                st.info("No logo-like matches found.")
             else:
-                visible_matches = match_data[:3]
-                extra_matches = match_data[3:world_k]
+                visible_matches = relevant_matches[:3]
+                extra_matches = relevant_matches[3:world_k]
 
                 cols = st.columns(3, gap="medium")
                 for i, match in enumerate(visible_matches):
@@ -253,7 +247,7 @@ with colR:
                         render_match_card(match)
 
                 if extra_matches:
-                    with st.expander(f"More matches ({len(extra_matches)})"):
+                    with st.expander(f"More logo-like matches ({len(extra_matches)})"):
                         more_cols = st.columns(3, gap="medium")
                         for i, match in enumerate(extra_matches):
                             with more_cols[i % 3]:
