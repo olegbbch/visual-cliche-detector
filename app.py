@@ -1,6 +1,6 @@
 import io
 import os
-import re
+from urllib.parse import urlparse
 
 import requests
 import streamlit as st
@@ -32,85 +32,62 @@ def proximity_label(sim_pct):
     return "Low"
 
 
+def domain_of(url: str) -> str:
+    try:
+        return urlparse(url).netloc.lower()
+    except Exception:
+        return ""
+
+
 def title_is_noise(title: str, link: str) -> bool:
     text = f"{title} {link}".lower()
 
     noisy_terms = [
-        "youtube",
-        "how to",
-        "tutorial",
-        "exercise",
-        "squat",
-        "flexibility",
-        "lyrics",
-        "song",
-        "video",
-        "pinterest",
-        "reddit",
-        "tiktok",
-        "facebook",
-        "instagram",
-        "shutterstock",
-        "freepik",
-        "clipart",
-        "drawing",
-        "sketch",
-        "doodle",
-        "cartoon",
-        "illustration",
-        "meme",
-        "wallpaper",
+        "youtube", "youtu.be", "reddit", "pinterest", "tiktok", "facebook",
+        "instagram", "shutterstock", "freepik", "clipart", "meme",
+        "tutorial", "how to", "exercise", "lyrics", "song", "video",
+        "drawing", "sketch", "doodle", "cartoon", "illustration", "wallpaper",
+        "squat", "flexibility", "coloring", "printable", "svg download",
     ]
 
-    return any(term in text for term in noisy_terms)
+    noisy_domains = [
+        "youtube.com", "youtu.be", "reddit.com", "pinterest.com", "tiktok.com",
+        "facebook.com", "instagram.com", "shutterstock.com", "freepik.com",
+    ]
+
+    if any(term in text for term in noisy_terms):
+        return True
+
+    dom = domain_of(link)
+    if any(nd in dom for nd in noisy_domains):
+        return True
+
+    return False
 
 
 def title_is_logo_like(title: str, link: str) -> bool:
     text = f"{title} {link}".lower()
 
     logo_terms = [
-        "logo",
-        "brand",
-        "branding",
-        "identity",
-        "company",
-        "official",
-        "inc",
-        "ltd",
-        "llc",
-        "group",
-        "studio",
-        "agency",
-        "services",
-        "hospitality",
-        "design",
+        "logo", "brand", "branding", "identity", "company", "official",
+        "inc", "ltd", "llc", "group", "studio", "agency", "services",
+        "hospitality", "design", "projects", "portfolio", "case study",
+        "help center", "about us", "our work",
     ]
 
-    return any(term in text for term in logo_terms)
-
-
-def warning_state(matches):
-    """
-    Rules:
-    - Only logo-like / non-noisy results count toward warning
-    - High warning only if 1+ High relevant match
-    - Mixed if 2+ Medium relevant matches
-    - Safe otherwise
-    """
-    relevant = [
-        m for m in matches
-        if not m.get("is_noise", False)
-        and (m.get("is_logo_like", False) or m.get("label") == "High")
+    brandy_domains = [
+        "1000logos", "behance", "dribbble", "brandsoftheworld",
+        "logowik", "logos-world", "crunchbase", "linkedin",
     ]
 
-    highs = sum(1 for m in relevant if m.get("label") == "High")
-    mediums = sum(1 for m in relevant if m.get("label") == "Medium")
+    if any(term in text for term in logo_terms):
+        return True
 
-    if highs >= 1:
-        return "high"
-    if mediums >= 2:
-        return "mixed"
-    return "safe"
+    dom = domain_of(link)
+    if any(bd in dom for bd in brandy_domains):
+        return True
+
+    return False
 
 
 @st.cache_data(show_spinner=False)
@@ -139,6 +116,9 @@ def build_match_data(result, uploaded_features):
     is_noise = title_is_noise(title, link)
     is_logo_like = title_is_logo_like(title, link)
 
+    # Only brand/logo-like results should be considered meaningful.
+    is_relevant = (not is_noise) and is_logo_like
+
     return {
         "thumb": thumb,
         "title": title,
@@ -147,7 +127,27 @@ def build_match_data(result, uploaded_features):
         "label": label,
         "is_noise": is_noise,
         "is_logo_like": is_logo_like,
+        "is_relevant": is_relevant,
     }
+
+
+def warning_state(matches):
+    """
+    Strict warning logic:
+    - HIGH only if there is at least 1 relevant High match
+    - MIXED only if there are at least 2 relevant Medium matches
+    - SAFE otherwise
+    """
+    relevant = [m for m in matches if m.get("is_relevant", False)]
+
+    high_count = sum(1 for m in relevant if m.get("label") == "High")
+    medium_count = sum(1 for m in relevant if m.get("label") == "Medium")
+
+    if high_count >= 1:
+        return "high"
+    if medium_count >= 2:
+        return "mixed"
+    return "safe"
 
 
 def render_match_card(match):
@@ -162,9 +162,11 @@ def render_match_card(match):
         st.caption(f"Proximity: **{match['label']}** ({match['sim_pct']:.0f}%)")
 
     if match["is_noise"]:
-        st.caption("Type: weak / noisy match")
-    elif match["is_logo_like"]:
+        st.caption("Type: noisy / generic image")
+    elif match["is_relevant"]:
         st.caption("Type: logo-like match")
+    else:
+        st.caption("Type: weak / unclear source")
 
     if match["link"]:
         st.markdown(f"[Source]({match['link']})")
@@ -231,7 +233,7 @@ with colR:
                 )
             elif state == "mixed":
                 st.info(
-                    "🟡 Mixed signal\n\nSome potentially relevant visual matches were found. Review manually."
+                    "🟡 Mixed signal\n\nSome potentially relevant logo-like matches were found. Review manually."
                 )
             else:
                 st.success(
