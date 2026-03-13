@@ -2,9 +2,10 @@ import io
 import os
 from urllib.parse import urlparse
 
+import numpy as np
 import requests
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageFilter, ImageOps
 
 from vcd_utils import (
     CATEGORIES,
@@ -25,9 +26,9 @@ def proximity_label(sim_pct):
     except Exception:
         return "Unknown"
 
-    if s >= 60:
+    if s >= 70:
         return "High"
-    if s >= 40:
+    if s >= 45:
         return "Medium"
     return "Low"
 
@@ -92,31 +93,135 @@ def title_is_logo_like(title: str, link: str) -> bool:
 
 
 @st.cache_data(show_spinner=False)
-def thumb_features(url: str):
+def download_thumb_bytes(url: str):
     try:
         r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
-        im = Image.open(io.BytesIO(r.content)).convert("RGBA")
-        return extract_features(im)
+        return r.content
     except Exception:
         return None
 
 
-def build_match_data(result, uploaded_features):
+def image_to_png_bytes(im: Image.Image) -> bytes:
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def open_rgba_from_bytes(data: bytes):
+    try:
+        return Image.open(io.BytesIO(data)).convert("RGBA")
+    except Exception:
+        return None
+
+
+def normalize_logo_image(im: Image.Image, size: int = 256) -> Image.Image:
+    # Put onto white background to stabilize transparency
+    bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
+    merged = Image.alpha_composite(bg, im.convert("RGBA")).convert("L")
+    merged = ImageOps.autocontrast(merged)
+    merged = ImageOps.contain(merged, (size, size))
+
+    canvas = Image.new("L", (size, size), 255)
+    x = (size - merged.width) // 2
+    y = (size - merged.height) // 2
+    canvas.paste(merged, (x, y))
+    return canvas
+
+
+def foreground_mask(im: Image.Image, size: int = 256) -> np.ndarray:
+    gray = normalize_logo_image(im, size=size)
+    arr = np.asarray(gray).astype(np.float32)
+
+    # Assume logo strokes are darker than background
+    threshold = np.percentile(arr, 75)
+    mask = arr < threshold
+
+    # If almost everything is foreground/background, fallback to mean threshold
+    ratio = mask.mean()
+    if ratio < 0.03 or ratio > 0.80:
+        threshold = arr.mean()
+        mask = arr < threshold
+
+    return mask.astype(np.float32)
+
+
+def silhouette_similarity(im1: Image.Image, im2: Image.Image) -> float:
+    m1 = foreground_mask(im1)
+    m2 = foreground_mask(im2)
+
+    intersection = np.logical_and(m1 > 0.5, m2 > 0.5).sum()
+    union = np.logical_or(m1 > 0.5, m2 > 0.5).sum()
+
+    if union == 0:
+        return 0.0
+
+    iou = intersection / union
+    return float(iou * 100.0)
+
+
+def edge_similarity(im1: Image.Image, im2: Image.Image, size: int = 256) -> float:
+    g1 = normalize_logo_image(im1, size=size).filter(ImageFilter.FIND_EDGES)
+    g2 = normalize_logo_image(im2, size=size).filter(ImageFilter.FIND_EDGES)
+
+    a = np.asarray(g1).astype(np.float32).reshape(-1)
+    b = np.asarray(g2).astype(np.float32).reshape(-1)
+
+    a = a - a.mean()
+    b = b - b.mean()
+
+    denom = (np.linalg.norm(a) * np.linalg.norm(b))
+    if denom == 0:
+        return 0.0
+
+    cos = float(np.dot(a, b) / denom)
+    cos = max(-1.0, min(1.0, cos))
+    return max(0.0, cos) * 100.0
+
+
+def combined_proximity(uploaded_im: Image.Image, uploaded_features, thumb_im: Image.Image, thumb_features) -> float:
+    feature_sim, _ = similarity_to_set(uploaded_features, [thumb_features])
+    sil_sim = silhouette_similarity(uploaded_im, thumb_im)
+    edg_sim = edge_similarity(uploaded_im, thumb_im)
+
+    # Weighted blend: structure matters more than raw thumbnail appearance
+    score = (0.45 * feature_sim) + (0.35 * sil_sim) + (0.20 * edg_sim)
+    return float(max(0.0, min(100.0, score)))
+
+
+def warning_state(matches):
+    relevant = [m for m in matches if m.get("is_relevant", False)]
+
+    high_count = sum(1 for m in relevant if m.get("label") == "High")
+    medium_count = sum(1 for m in relevant if m.get("label") == "Medium")
+
+    if high_count >= 1:
+        return "high"
+    if medium_count >= 2:
+        return "mixed"
+    return "safe"
+
+
+def build_match_data(result, uploaded_im, uploaded_features):
     thumb = result.get("thumbnail", "")
     title = result.get("title", "") or "Result"
     link = result.get("link", "")
 
     sim_pct = None
     if thumb:
-        tf = thumb_features(thumb)
-        if tf is not None:
-            sim_pct, _ = similarity_to_set(uploaded_features, [tf])
+        thumb_bytes = download_thumb_bytes(thumb)
+        if thumb_bytes:
+            thumb_im = open_rgba_from_bytes(thumb_bytes)
+            if thumb_im is not None:
+                try:
+                    tf = extract_features(thumb_im)
+                    sim_pct = combined_proximity(uploaded_im, uploaded_features, thumb_im, tf)
+                except Exception:
+                    sim_pct = None
 
     label = proximity_label(sim_pct if sim_pct is not None else 0)
     is_noise = title_is_noise(title, link)
     is_logo_like = title_is_logo_like(title, link)
-
     is_relevant = (not is_noise) and is_logo_like
 
     return {
@@ -129,25 +234,6 @@ def build_match_data(result, uploaded_features):
         "is_logo_like": is_logo_like,
         "is_relevant": is_relevant,
     }
-
-
-def warning_state(matches):
-    """
-    Strict warning logic:
-    - HIGH only if there is at least 1 relevant High match
-    - MIXED only if there are at least 2 relevant Medium matches
-    - SAFE otherwise
-    """
-    relevant = [m for m in matches if m.get("is_relevant", False)]
-
-    high_count = sum(1 for m in relevant if m.get("label") == "High")
-    medium_count = sum(1 for m in relevant if m.get("label") == "Medium")
-
-    if high_count >= 1:
-        return "high"
-    if medium_count >= 2:
-        return "mixed"
-    return "safe"
 
 
 def render_match_card(match):
@@ -216,7 +302,7 @@ with colR:
                 with st.spinner("World scan: searching the web…"):
                     world_results = world_scan(img, max_results=world_k)
 
-            match_data = [build_match_data(r, f) for r in world_results]
+            match_data = [build_match_data(r, img, f) for r in world_results]
             relevant_matches = [m for m in match_data if m.get("is_relevant", False)]
             state = warning_state(match_data)
 
