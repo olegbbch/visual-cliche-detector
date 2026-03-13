@@ -1,10 +1,17 @@
 import os
 import streamlit as st
 
-from vcd_utils import CATEGORIES, load_image, extract_features, load_reference_features, similarity_to_set, detect_cliches, trend_risk, semantic_mismatch, world_scan
-
-
+from vcd_utils import (
+    CATEGORIES,
+    load_image,
+    extract_features,
+    detect_cliches,
+    trend_risk,
+    semantic_mismatch,
+    world_scan,
+)
 from pdf_utils import make_risk_sheet_pdf
+
 
 def proximity_label(score):
     try:
@@ -31,12 +38,14 @@ def proximity_label(score):
     if s >= 55:
         return "Moderate"
     return "Low"
+
+
 APP_TITLE = "Visual Cliché Detector (MVP)"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.title(APP_TITLE)
 st.caption(
-    "Diagnostic prototype: similarity + cliché signals + trend risk + optional semantic tension. "
+    "Designer early warning system: web similarity + cliché signals + trend risk + optional semantic tension. "
     "(Heuristic; not legal/trademark search.)"
 )
 
@@ -47,72 +56,52 @@ colL, colR = st.columns([1, 2], gap="large")
 
 with colL:
     st.subheader("Input")
-    up = st.file_uploader("Upload logo mark (SVG/PNG/JPG)", type=["svg", "png", "jpg", "jpeg", "webp"])
+    up = st.file_uploader(
+        "Upload logo mark (SVG/PNG/JPG)",
+        type=["svg", "png", "jpg", "jpeg", "webp"]
+    )
 
     category = st.selectbox("Category context", options=CATEGORIES, index=0)
     extra_cat = st.selectbox("Optional second context", options=["-"] + CATEGORIES, index=0)
-    keywords = st.text_input("Positioning keywords (comma-separated, optional)", placeholder="human, warm, bold")
+    keywords = st.text_input(
+        "Positioning keywords (comma-separated, optional)",
+        placeholder="human, warm, bold"
+    )
 
-    world_on = st.checkbox("World scan (web)", value=False)
-    world_k = st.slider("How many results?", 3, 15, 8) if world_on else 0
+    world_on = True
+    world_k = st.slider("How many web matches?", 3, 15, 8)
 
     st.markdown("---")
-    st.subheader("Reference set")
-    st.write("Put reference logos into: `data/<category>/` to power similarity.")
     run = st.button("Analyze", type="primary", disabled=(up is None))
-
 
 with colR:
     st.subheader("Report")
 
     if not up:
-        st.info("Upload a mark to start. If SVG fails on cloud, upload PNG/JPG (export from Illustrator/Corel/etc.).")
+        st.info("Upload a mark to start. If SVG fails on cloud, upload PNG/JPG instead.")
     elif run:
         try:
-                        img = load_image(up.getvalue(), up.name)
+            img = load_image(up.getvalue(), up.name)
             st.image(img, caption="Uploaded mark", width=260)
 
             f = extract_features(img)
 
-            # --- World scan (web) ---
             world_results = []
             if world_on:
                 with st.spinner("World scan: searching the web…"):
                     world_results = world_scan(img, max_results=world_k)
 
-            # --- Similarity vs local reference sets ---
-            refs1, ref_names1 = load_reference_features(data_dir, category)
-            sim1, best_i1 = similarity_to_set(f, refs1)
-            best_name1 = ref_names1[best_i1] if (best_i1 is not None and best_i1 < len(ref_names1)) else None
-
-            sims = [(category, sim1, best_name1)]
-
-            if extra_cat != "-":
-                refs2, ref_names2 = load_reference_features(data_dir, extra_cat)
-                sim2, best_i2 = similarity_to_set(f, refs2)
-                best_name2 = ref_names2[best_i2] if (best_i2 is not None and best_i2 < len(ref_names2)) else None
-                sims.append((extra_cat, sim2, best_name2))
-
             st.markdown("## Early warning")
-            if world_on and world_results:
+            if world_results:
                 st.warning("⚠️ Designer, be careful\n\nSimilar visual marks were found online.")
             else:
                 st.success("✅ Looks safe\n\nNo strong visual similarities detected.")
 
-            st.markdown("## Similarity")
-            for cat, sim, best in sims:
-                st.metric(label=f"{cat}", value=f"{sim:.1f}%")
-                st.caption(f"Best match: {best}" if best else "No references found yet. Add files to data/...")
-
-            # --- Show World scan results ---
             if world_on:
                 st.markdown("## 🌐 World scan (web)")
 
-                with st.expander("debug: world_results raw"):
-                    st.write(world_results)
-
                 if not world_results:
-                    st.info("No web matches found (or API not configured / Cloudinary upload failed).")
+                    st.info("No web matches found.")
                 else:
                     cols = st.columns(3, gap="medium")
 
@@ -122,12 +111,16 @@ with colR:
                             title = r.get("title", "") or "Result"
                             score = r.get("score", 0)
                             label = proximity_label(score)
+                            link = r.get("link", "")
 
                             if thumb:
                                 st.image(thumb, use_container_width=True)
 
                             st.caption(title)
                             st.caption(f"Proximity: **{label}**")
+
+                            if link:
+                                st.markdown(f"[Source]({link})")
 
             st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
@@ -159,7 +152,7 @@ with colR:
                     title=APP_TITLE,
                     category=category,
                     extra_category=(extra_cat if extra_cat != "-" else None),
-                    similarity_rows=[{"category": c, "similarity": s, "best_match": b} for (c, s, b) in sims],
+                    similarity_rows=[],
                     cliches=cliches,
                     trend=tr,
                     semantic=sem,
