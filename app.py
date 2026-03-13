@@ -31,6 +31,26 @@ def proximity_label(sim_pct):
     return "Low"
 
 
+def warning_state(matches):
+    """
+    Decide overall report status from proximity-rich matches.
+    Rules:
+    - High if there is at least 1 High match
+    - Mixed if there are 2+ Medium matches, or 1 Medium
+    - Safe otherwise
+    """
+    highs = sum(1 for m in matches if m.get("label") == "High")
+    mediums = sum(1 for m in matches if m.get("label") == "Medium")
+
+    if highs >= 1:
+        return "high"
+    if mediums >= 2:
+        return "mixed"
+    if mediums == 1:
+        return "mixed"
+    return "safe"
+
+
 @st.cache_data(show_spinner=False)
 def thumb_features(url: str):
     try:
@@ -42,7 +62,7 @@ def thumb_features(url: str):
         return None
 
 
-def render_match_card(result, uploaded_features):
+def build_match_data(result, uploaded_features):
     thumb = result.get("thumbnail", "")
     title = result.get("title", "") or "Result"
     link = result.get("link", "")
@@ -53,20 +73,30 @@ def render_match_card(result, uploaded_features):
         if tf is not None:
             sim_pct, _ = similarity_to_set(uploaded_features, [tf])
 
-    if thumb:
-        st.image(thumb, use_container_width=True)
-
     label = proximity_label(sim_pct if sim_pct is not None else 0)
 
-    st.caption(title)
+    return {
+        "thumb": thumb,
+        "title": title,
+        "link": link,
+        "sim_pct": sim_pct,
+        "label": label,
+    }
 
-    if sim_pct is None:
-        st.caption(f"Proximity: **{label}**")
+
+def render_match_card(match):
+    if match["thumb"]:
+        st.image(match["thumb"], use_container_width=True)
+
+    st.caption(match["title"])
+
+    if match["sim_pct"] is None:
+        st.caption(f"Proximity: **{match['label']}**")
     else:
-        st.caption(f"Proximity: **{label}** ({sim_pct:.0f}%)")
+        st.caption(f"Proximity: **{match['label']}** ({match['sim_pct']:.0f}%)")
 
-    if link:
-        st.markdown(f"[Source]({link})")
+    if match["link"]:
+        st.markdown(f"[Source]({match['link']})")
 
 
 APP_TITLE = "Visual Cliché Detector (MVP)"
@@ -120,35 +150,41 @@ with colR:
                 with st.spinner("World scan: searching the web…"):
                     world_results = world_scan(img, max_results=world_k)
 
+            match_data = [build_match_data(r, f) for r in world_results]
+            state = warning_state(match_data)
+
             st.markdown("## Early warning")
-            if world_results:
+            if state == "high":
                 st.warning(
-                    "⚠️ Designer, be careful\n\nSimilar visual marks were found online."
+                    "⚠️ Designer, be careful\n\nStrong visual overlap was found online."
+                )
+            elif state == "mixed":
+                st.info(
+                    "🟡 Mixed signal\n\nSome loose visual matches were found. Review manually."
                 )
             else:
                 st.success(
-                    "✅ Looks safe\n\nNo strong visual similarities detected."
+                    "✅ Looks safe\n\nNo meaningful visual conflicts found."
                 )
 
             st.markdown("## 🌐 World scan (web)")
-
-            if not world_results:
+            if not match_data:
                 st.info("No web matches found.")
             else:
-                visible_results = world_results[:3]
-                extra_results = world_results[3:world_k]
+                visible_matches = match_data[:3]
+                extra_matches = match_data[3:world_k]
 
                 cols = st.columns(3, gap="medium")
-                for i, r in enumerate(visible_results):
+                for i, match in enumerate(visible_matches):
                     with cols[i % 3]:
-                        render_match_card(r, f)
+                        render_match_card(match)
 
-                if extra_results:
-                    with st.expander(f"More matches ({len(extra_results)})"):
+                if extra_matches:
+                    with st.expander(f"More matches ({len(extra_matches)})"):
                         more_cols = st.columns(3, gap="medium")
-                        for i, r in enumerate(extra_results):
+                        for i, match in enumerate(extra_matches):
                             with more_cols[i % 3]:
-                                render_match_card(r, f)
+                                render_match_card(match)
 
             st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
