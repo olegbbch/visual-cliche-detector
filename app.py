@@ -15,7 +15,6 @@ from vcd_utils import (
     trend_risk,
     world_scan,
 )
-from pdf_utils import make_risk_sheet_pdf
 
 
 SCAN_POOL = 12
@@ -211,12 +210,10 @@ st.caption(
     "Designer early warning system: web similarity + cliché signals + trend risk."
 )
 
-data_dir = os.path.join(os.path.dirname(__file__), "data")
-os.makedirs(data_dir, exist_ok=True)
-
 colL, colR = st.columns([1, 2], gap="large")
 
 with colL:
+
     st.subheader("Input")
 
     up = st.file_uploader(
@@ -225,16 +222,19 @@ with colL:
     )
 
     st.markdown("---")
+
     run = st.button("Analyze", type="primary", disabled=(up is None))
 
 
 with colR:
+
     st.subheader("Report")
 
     if not up:
         st.info("Upload a mark to start.")
 
     elif run:
+
         try:
 
             file_bytes = up.getvalue()
@@ -301,6 +301,7 @@ with colR:
                 if not relevant_matches:
                     st.info("No logo-like matches found.")
                 else:
+
                     visible = relevant_matches[:VISIBLE_MATCHES]
                     extra = relevant_matches[VISIBLE_MATCHES:]
 
@@ -317,26 +318,6 @@ with colR:
                             for i, m in enumerate(extra):
                                 with more_cols[i % 3]:
                                     render_match_card(m)
-
-            st.markdown("## Export")
-
-            if st.button("Download PDF Risk Sheet"):
-                pdf_bytes = make_risk_sheet_pdf(
-                    title=APP_TITLE,
-                    category="Automatic",
-                    extra_category=None,
-                    similarity_rows=[],
-                    cliches=cliches,
-                    trend=tr,
-                    semantic=None,
-                )
-
-                st.download_button(
-                    "Click to download",
-                    data=pdf_bytes,
-                    file_name="vcd_risk_sheet.pdf",
-                    mime="application/pdf"
-                )
 
         except Exception as e:
             st.error(f"Error while analyzing: {e}")
