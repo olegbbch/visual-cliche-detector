@@ -1,3 +1,4 @@
+import concurrent.futures
 import hashlib
 import io
 import os
@@ -21,6 +22,10 @@ from pdf_utils import make_risk_sheet_pdf
 SCAN_POOL = 12
 VISIBLE_MATCHES = 3
 WARNING_POOL = 5
+
+THUMB_TIMEOUT = 6
+THUMB_WORKERS = 8
+MAX_THUMB_ANALYSIS = 8
 
 
 def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
@@ -101,10 +106,20 @@ def title_is_logo_like(title: str, link: str):
     return False
 
 
+def is_potentially_relevant_result(result: dict) -> bool:
+    title = result.get("title", "") or "Result"
+    link = result.get("link", "")
+    return (not title_is_noise(title, link)) and title_is_logo_like(title, link)
+
+
 @st.cache_data(show_spinner=False)
 def thumb_features(url):
     try:
-        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get(
+            url,
+            timeout=THUMB_TIMEOUT,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
         r.raise_for_status()
         im = Image.open(io.BytesIO(r.content)).convert("RGBA")
         return extract_features(im)
@@ -113,24 +128,59 @@ def thumb_features(url):
 
 
 @st.cache_data(show_spinner=False)
-def cached_world_scan(file_bytes: bytes, file_name: str):
+def cached_world_scan(file_bytes: bytes, file_ext: str):
     """
     Stable web search:
-    - always fetch the same fixed pool size
-    - cache by exact file content + filename
+    - fixed pool size
+    - cache by exact file content + extension
     """
-    img = load_image(file_bytes, file_name)
+    safe_name = f"upload{file_ext.lower()}" if file_ext else "upload.png"
+    img = load_image(file_bytes, safe_name)
     return world_scan(img, max_results=SCAN_POOL)
 
 
-def build_match_data(result, uploaded_features):
+def prefetch_thumb_features(results):
+    thumbs = []
+    seen = set()
+
+    for r in results:
+        thumb = (r.get("thumbnail") or "").strip()
+        if thumb and thumb not in seen:
+            seen.add(thumb)
+            thumbs.append(thumb)
+
+    thumbs = thumbs[:MAX_THUMB_ANALYSIS]
+
+    if not thumbs:
+        return {}
+
+    feature_map = {}
+    max_workers = min(THUMB_WORKERS, len(thumbs))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_thumb = {
+            executor.submit(thumb_features, thumb): thumb
+            for thumb in thumbs
+        }
+
+        for future in concurrent.futures.as_completed(future_to_thumb):
+            thumb = future_to_thumb[future]
+            try:
+                feature_map[thumb] = future.result()
+            except Exception:
+                feature_map[thumb] = None
+
+    return feature_map
+
+
+def build_match_data(result, uploaded_features, thumb_feature_map):
     thumb = result.get("thumbnail", "")
     title = result.get("title", "") or "Result"
     link = result.get("link", "")
 
     sim_pct = None
     if thumb:
-        tf = thumb_features(thumb)
+        tf = thumb_feature_map.get(thumb)
         if tf is not None:
             sim_pct, _ = similarity_to_set(uploaded_features, [tf])
 
@@ -245,6 +295,7 @@ with colR:
         try:
             file_bytes = up.getvalue()
             file_name = up.name
+            file_ext = os.path.splitext(file_name)[1].lower() if file_name else ""
             _fp = file_fingerprint(file_bytes, file_name)
 
             img = load_image(file_bytes, file_name)
@@ -253,9 +304,21 @@ with colR:
             f = extract_features(img)
 
             with st.spinner("World scan: searching the web…"):
-                world_results = cached_world_scan(file_bytes, file_name)
+                world_results = cached_world_scan(file_bytes, file_ext)
 
-            match_data = [build_match_data(r, f) for r in world_results]
+                # Сначала отбираем только потенциально релевантные результаты.
+                # Это уменьшает число useless thumbnail downloads.
+                likely_results = [r for r in world_results if is_potentially_relevant_result(r)]
+
+                # Если фильтр оказался слишком строгим, подстрахуемся и возьмем весь набор.
+                thumb_source_results = likely_results if likely_results else world_results
+
+                thumb_feature_map = prefetch_thumb_features(thumb_source_results)
+
+            match_data = [
+                build_match_data(r, f, thumb_feature_map)
+                for r in world_results
+            ]
             match_data = stable_sort_matches(match_data)
 
             relevant_matches = [m for m in match_data if m["is_relevant"]]
