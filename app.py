@@ -1,4 +1,3 @@
-import concurrent.futures
 import hashlib
 import io
 import os
@@ -22,10 +21,6 @@ from pdf_utils import make_risk_sheet_pdf
 SCAN_POOL = 12
 VISIBLE_MATCHES = 3
 WARNING_POOL = 5
-
-THUMB_TIMEOUT = 6
-THUMB_WORKERS = 8
-MAX_THUMB_ANALYSIS = 8
 
 
 def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
@@ -106,20 +101,10 @@ def title_is_logo_like(title: str, link: str):
     return False
 
 
-def is_potentially_relevant_result(result: dict) -> bool:
-    title = result.get("title", "") or "Result"
-    link = result.get("link", "")
-    return (not title_is_noise(title, link)) and title_is_logo_like(title, link)
-
-
 @st.cache_data(show_spinner=False)
 def thumb_features(url):
     try:
-        r = requests.get(
-            url,
-            timeout=THUMB_TIMEOUT,
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
         im = Image.open(io.BytesIO(r.content)).convert("RGBA")
         return extract_features(im)
@@ -128,59 +113,24 @@ def thumb_features(url):
 
 
 @st.cache_data(show_spinner=False)
-def cached_world_scan(file_bytes: bytes, file_ext: str):
+def cached_world_scan(file_bytes: bytes, file_name: str):
     """
     Stable web search:
-    - fixed pool size
-    - cache by exact file content + extension
+    - always fetch the same fixed pool size
+    - cache by exact file content + filename
     """
-    safe_name = f"upload{file_ext.lower()}" if file_ext else "upload.png"
-    img = load_image(file_bytes, safe_name)
+    img = load_image(file_bytes, file_name)
     return world_scan(img, max_results=SCAN_POOL)
 
 
-def prefetch_thumb_features(results):
-    thumbs = []
-    seen = set()
-
-    for r in results:
-        thumb = (r.get("thumbnail") or "").strip()
-        if thumb and thumb not in seen:
-            seen.add(thumb)
-            thumbs.append(thumb)
-
-    thumbs = thumbs[:MAX_THUMB_ANALYSIS]
-
-    if not thumbs:
-        return {}
-
-    feature_map = {}
-    max_workers = min(THUMB_WORKERS, len(thumbs))
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_thumb = {
-            executor.submit(thumb_features, thumb): thumb
-            for thumb in thumbs
-        }
-
-        for future in concurrent.futures.as_completed(future_to_thumb):
-            thumb = future_to_thumb[future]
-            try:
-                feature_map[thumb] = future.result()
-            except Exception:
-                feature_map[thumb] = None
-
-    return feature_map
-
-
-def build_match_data(result, uploaded_features, thumb_feature_map):
+def build_match_data(result, uploaded_features):
     thumb = result.get("thumbnail", "")
     title = result.get("title", "") or "Result"
     link = result.get("link", "")
 
     sim_pct = None
     if thumb:
-        tf = thumb_feature_map.get(thumb)
+        tf = thumb_features(thumb)
         if tf is not None:
             sim_pct, _ = similarity_to_set(uploaded_features, [tf])
 
@@ -295,81 +245,19 @@ with colR:
         try:
             file_bytes = up.getvalue()
             file_name = up.name
-            file_ext = os.path.splitext(file_name)[1].lower() if file_name else ""
             _fp = file_fingerprint(file_bytes, file_name)
 
             img = load_image(file_bytes, file_name)
-            st.image(img, caption="Uploaded mark", width=260)
-
             f = extract_features(img)
 
-            with st.spinner("World scan: searching the web…"):
-                world_results = cached_world_scan(file_bytes, file_ext)
-
-                # Сначала отбираем только потенциально релевантные результаты.
-                # Это уменьшает число useless thumbnail downloads.
-                likely_results = [r for r in world_results if is_potentially_relevant_result(r)]
-
-                # Если фильтр оказался слишком строгим, подстрахуемся и возьмем весь набор.
-                thumb_source_results = likely_results if likely_results else world_results
-
-                thumb_feature_map = prefetch_thumb_features(thumb_source_results)
-
-            match_data = [
-                build_match_data(r, f, thumb_feature_map)
-                for r in world_results
-            ]
-            match_data = stable_sort_matches(match_data)
-
-            relevant_matches = [m for m in match_data if m["is_relevant"]]
-            state = warning_state(match_data)
-
-            st.markdown("## Early warning")
-
-            if state == "high":
-                st.warning(
-                    "⚠️ Designer, be careful\n\nStrong logo-like visual overlap was found online."
-                )
-
-            elif state == "mixed":
-                st.info(
-                    "Some potentially relevant logo-like matches were found."
-                )
-
-            else:
-                st.success(
-                    "Looks safe.\n\nNo meaningful logo-like matches found online."
-                )
-
-            st.markdown("## 🌐 World scan (web)")
-
-            if not relevant_matches:
-                st.info("No logo-like matches found.")
-
-            else:
-                visible = relevant_matches[:VISIBLE_MATCHES]
-                extra = relevant_matches[VISIBLE_MATCHES:]
-
-                cols = st.columns(3, gap="medium")
-
-                for i, m in enumerate(visible):
-                    with cols[i % 3]:
-                        render_match_card(m)
-
-                if extra:
-                    with st.expander(f"More logo-like matches ({len(extra)})"):
-                        more_cols = st.columns(3, gap="medium")
-
-                        for i, m in enumerate(extra):
-                            with more_cols[i % 3]:
-                                render_match_card(m)
+            # 1) Show immediate content first
+            st.image(img, caption="Uploaded mark", width=260)
 
             st.markdown("## Cliché signals")
             cliches = detect_cliches(f)
 
             if not cliches:
                 st.success("No strong cliché signals detected.")
-
             else:
                 for s in cliches:
                     with st.expander(s["title"], expanded=True):
@@ -380,6 +268,67 @@ with colR:
             tr = trend_risk(f)
             st.write(f"**Status:** {tr['status']}")
             st.write(tr["note"])
+
+            # 2) Reserve placeholders for the slow part
+            wait_box = st.empty()
+            early_warning_box = st.empty()
+            world_scan_box = st.empty()
+
+            wait_box.info("Web scan in progress... Searching for similar logo-like marks online.")
+
+            # 3) Slow search starts only after useful content is already on screen
+            with st.spinner("World scan: searching the web…"):
+                world_results = cached_world_scan(file_bytes, file_name)
+
+            match_data = [build_match_data(r, f) for r in world_results]
+            match_data = stable_sort_matches(match_data)
+
+            relevant_matches = [m for m in match_data if m["is_relevant"]]
+            state = warning_state(match_data)
+
+            # 4) Replace waiting state with final results
+            wait_box.empty()
+
+            with early_warning_box.container():
+                st.markdown("## Early warning")
+
+                if state == "high":
+                    st.warning(
+                        "⚠️ Designer, be careful\n\nStrong logo-like visual overlap was found online."
+                    )
+
+                elif state == "mixed":
+                    st.info(
+                        "Some potentially relevant logo-like matches were found."
+                    )
+
+                else:
+                    st.success(
+                        "Looks safe.\n\nNo meaningful logo-like matches found online."
+                    )
+
+            with world_scan_box.container():
+                st.markdown("## 🌐 World scan (web)")
+
+                if not relevant_matches:
+                    st.info("No logo-like matches found.")
+                else:
+                    visible = relevant_matches[:VISIBLE_MATCHES]
+                    extra = relevant_matches[VISIBLE_MATCHES:]
+
+                    cols = st.columns(3, gap="medium")
+
+                    for i, m in enumerate(visible):
+                        with cols[i % 3]:
+                            render_match_card(m)
+
+                    if extra:
+                        with st.expander(f"More logo-like matches ({len(extra)})"):
+                            more_cols = st.columns(3, gap="medium")
+
+                            for i, m in enumerate(extra):
+                                with more_cols[i % 3]:
+                                    render_match_card(m)
 
             st.markdown("## Export")
 
