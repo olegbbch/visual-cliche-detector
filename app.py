@@ -8,11 +8,9 @@ import streamlit as st
 from PIL import Image
 
 from vcd_utils import (
-    CATEGORIES,
     detect_cliches,
     extract_features,
     load_image,
-    semantic_mismatch,
     similarity_to_set,
     trend_risk,
     world_scan,
@@ -218,7 +216,7 @@ st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.title(APP_TITLE)
 
 st.caption(
-    "Designer early warning system: web similarity + cliché signals + trend risk + optional semantic tension."
+    "Designer early warning system: web similarity + cliché signals + trend risk."
 )
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -232,19 +230,6 @@ with colL:
     up = st.file_uploader(
         "Upload logo mark (SVG/PNG/JPG)",
         type=["svg", "png", "jpg", "jpeg", "webp"],
-    )
-
-    category = st.selectbox("Category context", options=CATEGORIES, index=0)
-
-    extra_cat = st.selectbox(
-        "Optional second context",
-        options=["-"] + CATEGORIES,
-        index=0
-    )
-
-    keywords = st.text_input(
-        "Positioning keywords (comma-separated, optional)",
-        placeholder="human, warm, bold"
     )
 
     st.markdown("---")
@@ -333,27 +318,17 @@ with colR:
             st.write(f"**Status:** {tr['status']}")
             st.write(tr["note"])
 
-            st.markdown("## Semantic check")
-            kw = [k.strip() for k in keywords.split(",")] if keywords else []
-            sem = semantic_mismatch(f, kw)
-
-            if sem:
-                st.write(f"**{sem['status']}**")
-                st.write(sem["note"])
-            else:
-                st.caption("No positioning keywords provided.")
-
             st.markdown("## Export")
 
             if st.button("Download PDF Risk Sheet"):
                 pdf_bytes = make_risk_sheet_pdf(
                     title=APP_TITLE,
-                    category=category,
-                    extra_category=(extra_cat if extra_cat != "-" else None),
+                    category="Automatic",
+                    extra_category=None,
                     similarity_rows=[],
                     cliches=cliches,
                     trend=tr,
-                    semantic=sem,
+                    semantic=None,
                 )
 
                 st.download_button(
