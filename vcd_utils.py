@@ -4,12 +4,12 @@ import io
 import math
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import requests
 import streamlit as st
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 
 try:
     import cairosvg  # type: ignore
@@ -17,6 +17,8 @@ try:
 except Exception:
     _HAS_CAIRO = False
 
+
+CATEGORIES = ["fintech", "saas", "wellness", "kids", "culture", "fashion", "ngo"]
 
 WORLD_SCAN_TIMEOUT = 20
 CLOUDINARY_TIMEOUT = 20
@@ -127,7 +129,6 @@ def _count_holes(bw: np.ndarray) -> int:
                         for ny, nx in neighbors(cy, cx):
                             if bw[ny, nx] == 0 and visited[ny, nx] == 0:
                                 stack.append((ny, nx))
-
     return int(holes)
 
 
@@ -191,28 +192,24 @@ def detect_cliches(f: Features) -> List[Dict[str, str]]:
             "desc": "Strong symmetry; many categories overuse symmetric tech marks.",
             "common_in": "SaaS / Fintech / AI tools",
         })
-
     if f.circularity > 0.65 and f.holes >= 1:
         signals.append({
             "title": "Circle/loop archetype",
             "desc": "High circularity + enclosed space suggests a loop/ring family mark.",
             "common_in": "Wellness / Tech / Community brands",
         })
-
     if f.stroke_like > 0.75:
         signals.append({
             "title": "Monoline / stroke-like mark",
             "desc": "High perimeter-to-area indicates a line-based mark (often trendy, often saturated).",
             "common_in": "Wellness / DTC / Apps",
         })
-
     if f.holes >= 2:
         signals.append({
             "title": "Multi-hole geometry",
             "desc": "Multiple enclosed regions often resemble 'infinity', 'link', or 'interlock' families.",
             "common_in": "Fintech / Logistics / SaaS",
         })
-
     if f.edge_density < 0.04:
         signals.append({
             "title": "Ultra-minimal silhouette",
@@ -229,23 +226,96 @@ def trend_risk(f: Features) -> Dict[str, str]:
             "status": "Saturated",
             "note": "Monoline + symmetric geometry is heavily used in recent years.",
         }
-
     if f.circularity > 0.70 and f.holes >= 1:
         return {
             "status": "Peak",
             "note": "Loop/ring marks had a strong 2021–2024 run; now depend on category.",
         }
-
     if f.edge_density > 0.12 and f.sym < 0.65:
         return {
             "status": "Rising",
             "note": "More expressive, less symmetric forms are trending up in several categories.",
         }
-
     return {
         "status": "Neutral",
         "note": "No strong trend signal detected from shape stats.",
     }
+
+
+_EXPECTED = {
+    "warm": {"sym_max": 0.90},
+    "human": {"sym_max": 0.85},
+    "playful": {"sym_max": 0.92},
+    "radical": {"sym_max": 0.78},
+    "bold": {"sym_max": 0.82},
+    "premium": {"stroke_max": 0.75},
+    "trust": {"sym_min": 0.70},
+    "tech": {"sym_min": 0.75},
+}
+
+
+def semantic_mismatch(f: Features, keywords: List[str]) -> Optional[Dict[str, str]]:
+    if not keywords:
+        return None
+
+    kws = [k.strip().lower() for k in keywords if k.strip()]
+    if not kws:
+        return None
+
+    notes = []
+
+    for k in kws:
+        rule = _EXPECTED.get(k)
+        if not rule:
+            continue
+
+        if "sym_max" in rule and f.sym > rule["sym_max"]:
+            notes.append(
+                f"'{k}': often benefits from less rigid symmetry; current symmetry={f.sym:.2f}."
+            )
+        if "sym_min" in rule and f.sym < rule["sym_min"]:
+            notes.append(
+                f"'{k}': often correlates with higher symmetry; current symmetry={f.sym:.2f}."
+            )
+        if "stroke_max" in rule and f.stroke_like > rule["stroke_max"]:
+            notes.append(
+                f"'{k}': may suffer from overly thin/monoline marks; stroke_like={f.stroke_like:.2f}."
+            )
+
+    if not notes:
+        return {
+            "status": "No obvious mismatch",
+            "note": "Heuristic check found no strong tension with provided keywords.",
+        }
+
+    return {
+        "status": "Possible semantic tension",
+        "note": " ".join(notes)[:450],
+    }
+
+
+def load_reference_features(data_dir: str, category: str):
+    cat_dir = os.path.join(data_dir, category)
+    if not os.path.isdir(cat_dir):
+        return [], []
+
+    feats = []
+    names = []
+
+    for fn in sorted(os.listdir(cat_dir)):
+        if not fn.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg")):
+            continue
+
+        path = os.path.join(cat_dir, fn)
+        try:
+            with open(path, "rb") as fobj:
+                img = load_image(fobj.read(), fn)
+            feats.append(extract_features(img))
+            names.append(fn)
+        except Exception:
+            continue
+
+    return feats, names
 
 
 def _normalize_result_item(it: dict) -> dict:
@@ -340,7 +410,7 @@ def _google_lens_search_cached(image_url: str, max_results: int) -> List[dict]:
     rr.raise_for_status()
     j = rr.json()
 
-    items = []
+    items: List[dict] = []
     if isinstance(j.get("visual_matches"), list):
         items = j["visual_matches"]
     elif isinstance(j.get("inline_images"), list):
@@ -349,7 +419,11 @@ def _google_lens_search_cached(image_url: str, max_results: int) -> List[dict]:
     return _dedupe_results(items, max_results=max_results)
 
 
-def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
+def world_scan(img: Image.Image, max_results: int = 12) -> List[dict]:
+    """
+    World scan via SerpAPI + Google Lens.
+    Важно: сохраняем порядок Google Lens, не сортируем сами.
+    """
     api_key = os.getenv("SERPAPI_KEY", "").strip()
     cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
     upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "").strip()
@@ -369,9 +443,6 @@ def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
             return []
 
         results = _google_lens_search_cached(image_url, max_results=max_results)
-
-        # Важно: сохраняем исходный порядок Google Lens,
-        # не сортируем результаты сами.
         return results[:max_results]
 
     except Exception:
