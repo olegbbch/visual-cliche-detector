@@ -19,11 +19,12 @@ from vcd_utils import (
 from pdf_utils import make_risk_sheet_pdf
 
 
-SCAN_POOL = 8
+SCAN_POOL = 5
 VISIBLE_MATCHES = 3
 WARNING_POOL = 3
-THUMB_TIMEOUT = 6
-THUMB_WORKERS = 8
+THUMB_TIMEOUT = 4
+THUMB_WORKERS = 6
+MAX_THUMB_ANALYSIS = 4
 
 
 def file_fingerprint(file_bytes: bytes) -> str:
@@ -120,11 +121,6 @@ def thumb_features(url):
 
 @st.cache_data(show_spinner=False)
 def cached_world_scan(file_bytes: bytes, file_ext: str):
-    """
-    Stable web search:
-    - always fetch the same fixed pool size
-    - cache by exact file content + extension
-    """
     safe_name = f"upload{file_ext.lower()}" if file_ext else "upload.png"
     img = load_image(file_bytes, safe_name)
     return world_scan(img, max_results=SCAN_POOL)
@@ -140,6 +136,7 @@ def prefetch_thumb_features(results):
             seen.add(thumb)
             thumbs.append(thumb)
 
+    thumbs = thumbs[:MAX_THUMB_ANALYSIS]
     feature_map = {}
 
     if not thumbs:
@@ -217,9 +214,6 @@ def stable_sort_matches(matches):
 
 
 def warning_state(matches):
-    """
-    Warning is based on a fixed top pool, not on UI controls.
-    """
     relevant = [m for m in matches if m["is_relevant"]][:WARNING_POOL]
 
     high_count = sum(1 for m in relevant if m["label"] == "High")
@@ -313,12 +307,8 @@ with colR:
                 st.warning(
                     "⚠️ Designer, be careful\n\nStrong logo-like visual overlap was found online."
                 )
-
             elif state == "mixed":
-                st.info(
-                    "Some potentially relevant logo-like matches were found."
-                )
-
+                st.info("Some potentially relevant logo-like matches were found.")
             else:
                 st.success(
                     "Looks safe.\n\nNo meaningful logo-like matches found online."
@@ -328,7 +318,6 @@ with colR:
 
             if not relevant_matches:
                 st.info("No logo-like matches found.")
-
             else:
                 visible = relevant_matches[:VISIBLE_MATCHES]
                 extra = relevant_matches[VISIBLE_MATCHES:]
@@ -342,7 +331,6 @@ with colR:
                 if extra:
                     with st.expander(f"More logo-like matches ({len(extra)})"):
                         more_cols = st.columns(3, gap="medium")
-
                         for i, m in enumerate(extra):
                             with more_cols[i % 3]:
                                 render_match_card(m)
