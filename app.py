@@ -1,3 +1,4 @@
+import concurrent.futures
 import hashlib
 import io
 import os
@@ -8,11 +9,9 @@ import streamlit as st
 from PIL import Image
 
 from vcd_utils import (
-    CATEGORIES,
     detect_cliches,
     extract_features,
     load_image,
-    semantic_mismatch,
     similarity_to_set,
     trend_risk,
     world_scan,
@@ -20,14 +19,15 @@ from vcd_utils import (
 from pdf_utils import make_risk_sheet_pdf
 
 
-SCAN_POOL = 12
+SCAN_POOL = 8
 VISIBLE_MATCHES = 3
-WARNING_POOL = 5
+WARNING_POOL = 3
+THUMB_TIMEOUT = 6
+THUMB_WORKERS = 8
 
 
-def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
+def file_fingerprint(file_bytes: bytes) -> str:
     h = hashlib.sha256()
-    h.update(file_name.encode("utf-8", errors="ignore"))
     h.update(file_bytes)
     return h.hexdigest()
 
@@ -106,7 +106,11 @@ def title_is_logo_like(title: str, link: str):
 @st.cache_data(show_spinner=False)
 def thumb_features(url):
     try:
-        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get(
+            url,
+            timeout=THUMB_TIMEOUT,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
         r.raise_for_status()
         im = Image.open(io.BytesIO(r.content)).convert("RGBA")
         return extract_features(im)
@@ -115,24 +119,58 @@ def thumb_features(url):
 
 
 @st.cache_data(show_spinner=False)
-def cached_world_scan(file_bytes: bytes, file_name: str):
+def cached_world_scan(file_bytes: bytes, file_ext: str):
     """
     Stable web search:
     - always fetch the same fixed pool size
-    - cache by exact file content + filename
+    - cache by exact file content + extension
     """
-    img = load_image(file_bytes, file_name)
+    safe_name = f"upload{file_ext.lower()}" if file_ext else "upload.png"
+    img = load_image(file_bytes, safe_name)
     return world_scan(img, max_results=SCAN_POOL)
 
 
-def build_match_data(result, uploaded_features):
+def prefetch_thumb_features(results):
+    thumbs = []
+    seen = set()
+
+    for r in results:
+        thumb = (r.get("thumbnail") or "").strip()
+        if thumb and thumb not in seen:
+            seen.add(thumb)
+            thumbs.append(thumb)
+
+    feature_map = {}
+
+    if not thumbs:
+        return feature_map
+
+    max_workers = min(THUMB_WORKERS, len(thumbs))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_thumb = {
+            executor.submit(thumb_features, thumb): thumb
+            for thumb in thumbs
+        }
+
+        for future in concurrent.futures.as_completed(future_to_thumb):
+            thumb = future_to_thumb[future]
+            try:
+                feature_map[thumb] = future.result()
+            except Exception:
+                feature_map[thumb] = None
+
+    return feature_map
+
+
+def build_match_data(result, uploaded_features, thumb_feature_map):
     thumb = result.get("thumbnail", "")
     title = result.get("title", "") or "Result"
     link = result.get("link", "")
 
     sim_pct = None
     if thumb:
-        tf = thumb_features(thumb)
+        tf = thumb_feature_map.get(thumb)
         if tf is not None:
             sim_pct, _ = similarity_to_set(uploaded_features, [tf])
 
@@ -172,6 +210,7 @@ def stable_sort_matches(matches):
             label_rank(m["label"]),
             -sim,
             m["title"].lower(),
+            m["link"].lower(),
         )
 
     return sorted(matches, key=sort_key)
@@ -218,7 +257,7 @@ st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.title(APP_TITLE)
 
 st.caption(
-    "Designer early warning system: web similarity + cliché signals + trend risk + optional semantic tension."
+    "Designer early warning system: web similarity + cliché signals + trend risk."
 )
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -234,19 +273,6 @@ with colL:
         type=["svg", "png", "jpg", "jpeg", "webp"],
     )
 
-    category = st.selectbox("Category context", options=CATEGORIES, index=0)
-
-    extra_cat = st.selectbox(
-        "Optional second context",
-        options=["-"] + CATEGORIES,
-        index=0
-    )
-
-    keywords = st.text_input(
-        "Positioning keywords (comma-separated, optional)",
-        placeholder="human, warm, bold"
-    )
-
     st.markdown("---")
     run = st.button("Analyze", type="primary", disabled=(up is None))
 
@@ -260,7 +286,8 @@ with colR:
         try:
             file_bytes = up.getvalue()
             file_name = up.name
-            _fp = file_fingerprint(file_bytes, file_name)
+            file_ext = os.path.splitext(file_name)[1].lower() if file_name else ""
+            _fp = file_fingerprint(file_bytes)
 
             img = load_image(file_bytes, file_name)
             st.image(img, caption="Uploaded mark", width=260)
@@ -268,9 +295,13 @@ with colR:
             f = extract_features(img)
 
             with st.spinner("World scan: searching the web…"):
-                world_results = cached_world_scan(file_bytes, file_name)
+                world_results = cached_world_scan(file_bytes, file_ext)
+                thumb_feature_map = prefetch_thumb_features(world_results)
 
-            match_data = [build_match_data(r, f) for r in world_results]
+            match_data = [
+                build_match_data(r, f, thumb_feature_map)
+                for r in world_results
+            ]
             match_data = stable_sort_matches(match_data)
 
             relevant_matches = [m for m in match_data if m["is_relevant"]]
@@ -321,7 +352,6 @@ with colR:
 
             if not cliches:
                 st.success("No strong cliché signals detected.")
-
             else:
                 for s in cliches:
                     with st.expander(s["title"], expanded=True):
@@ -333,27 +363,17 @@ with colR:
             st.write(f"**Status:** {tr['status']}")
             st.write(tr["note"])
 
-            st.markdown("## Semantic check")
-            kw = [k.strip() for k in keywords.split(",")] if keywords else []
-            sem = semantic_mismatch(f, kw)
-
-            if sem:
-                st.write(f"**{sem['status']}**")
-                st.write(sem["note"])
-            else:
-                st.caption("No positioning keywords provided.")
-
             st.markdown("## Export")
 
             if st.button("Download PDF Risk Sheet"):
                 pdf_bytes = make_risk_sheet_pdf(
                     title=APP_TITLE,
-                    category=category,
-                    extra_category=(extra_cat if extra_cat != "-" else None),
+                    category="Automatic",
+                    extra_category=None,
                     similarity_rows=[],
                     cliches=cliches,
                     trend=tr,
-                    semantic=sem,
+                    semantic=None,
                 )
 
                 st.download_button(
