@@ -236,6 +236,7 @@ with colR:
 
     elif run:
         try:
+
             file_bytes = up.getvalue()
             file_name = up.name
 
@@ -245,9 +246,13 @@ with colR:
             st.image(img, caption="Uploaded mark", width=260)
 
             scan_box = st.empty()
-            scan_box.info("Web scan in progress...")
+
+            with scan_box.container():
+                st.info("Web scan in progress...")
+                st.caption("Searching the web for similar marks…")
 
             st.markdown("## Cliché signals")
+
             cliches = detect_cliches(f)
 
             if not cliches:
@@ -259,12 +264,12 @@ with colR:
                         st.caption(f"Common in: {s['common_in']}")
 
             st.markdown("## Trend risk")
+
             tr = trend_risk(f)
             st.write(f"**Status:** {tr['status']}")
             st.write(tr["note"])
 
-            with st.spinner("Searching the web for similar marks…"):
-                world_results = cached_world_scan(file_bytes, file_name)
+            world_results = cached_world_scan(file_bytes, file_name)
 
             match_data = [build_match_data(r, f) for r in world_results]
             match_data = stable_sort_matches(match_data)
