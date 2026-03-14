@@ -19,12 +19,12 @@ from vcd_utils import (
 from pdf_utils import make_risk_sheet_pdf
 
 
-SCAN_POOL = 5
+SCAN_POOL = 8
 VISIBLE_MATCHES = 3
-WARNING_POOL = 3
-THUMB_TIMEOUT = 4
-THUMB_WORKERS = 6
-MAX_THUMB_ANALYSIS = 4
+WARNING_POOL = 5
+THUMB_TIMEOUT = 6
+THUMB_WORKERS = 8
+MAX_THUMB_ANALYSIS = 8
 
 
 def file_fingerprint(file_bytes: bytes) -> str:
@@ -55,24 +55,27 @@ def domain_of(url: str):
 
 def title_is_noise(title: str, link: str):
     text = f"{title} {link}".lower()
+    dom = domain_of(link)
 
     noisy_terms = [
-        "youtube", "youtu.be", "reddit", "pinterest", "tiktok", "facebook",
-        "instagram", "shutterstock", "freepik", "clipart", "meme",
-        "tutorial", "how to", "exercise", "lyrics", "song", "video",
-        "drawing", "sketch", "doodle", "cartoon", "illustration", "wallpaper",
-        "diagram", "schematic", "process", "step by step",
+        "reddit", "pinterest", "tiktok",
+        "shutterstock", "freepik", "clipart", "meme",
+        "tutorial", "how to", "exercise", "lyrics", "song",
+        "drawing", "sketch", "doodle", "cartoon", "illustration",
+        "wallpaper", "diagram", "schematic", "process", "step by step",
     ]
 
     noisy_domains = [
-        "youtube.com", "youtu.be", "reddit.com", "pinterest.com",
-        "tiktok.com", "facebook.com", "instagram.com",
+        "reddit.com",
+        "pinterest.com",
+        "tiktok.com",
     ]
 
+    # Важно: YouTube / Instagram / Facebook не считаем автоматическим шумом.
+    # Там часто бывают official pages, brand assets, help pages и т.д.
     if any(t in text for t in noisy_terms):
         return True
 
-    dom = domain_of(link)
     if any(d in dom for d in noisy_domains):
         return True
 
@@ -92,6 +95,7 @@ def title_is_logo_like(title: str, link: str):
     brand_domains = [
         "1000logos", "behance", "dribbble", "brandsoftheworld",
         "logowik", "logos-world", "crunchbase", "linkedin",
+        "youtube.com", "instagram.com", "facebook.com",
     ]
 
     if any(t in text for t in logo_terms):
