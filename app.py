@@ -114,11 +114,6 @@ def thumb_features(url):
 
 @st.cache_data(show_spinner=False)
 def cached_world_scan(file_bytes: bytes, file_name: str):
-    """
-    Stable web search:
-    - always fetch the same fixed pool size
-    - cache by exact file content + filename
-    """
     img = load_image(file_bytes, file_name)
     return world_scan(img, max_results=SCAN_POOL)
 
@@ -176,9 +171,6 @@ def stable_sort_matches(matches):
 
 
 def warning_state(matches):
-    """
-    Warning is based on a fixed top pool, not on UI controls.
-    """
     relevant = [m for m in matches if m["is_relevant"]][:WARNING_POOL]
 
     high_count = sum(1 for m in relevant if m["label"] == "High")
@@ -235,6 +227,7 @@ with colL:
     st.markdown("---")
     run = st.button("Analyze", type="primary", disabled=(up is None))
 
+
 with colR:
     st.subheader("Report")
 
@@ -245,39 +238,18 @@ with colR:
         try:
             file_bytes = up.getvalue()
             file_name = up.name
-            _fp = file_fingerprint(file_bytes, file_name)
 
             img = load_image(file_bytes, file_name)
             f = extract_features(img)
 
-            # 1) Show immediate content first
-            st.image(img, caption="Uploaded mark", width=260)
-
-            st.markdown("## Cliché signals")
-            cliches = detect_cliches(f)
-
-            if not cliches:
-                st.success("No strong cliché signals detected.")
-            else:
-                for s in cliches:
-                    with st.expander(s["title"], expanded=True):
-                        st.write(s["desc"])
-                        st.caption(f"Common in: {s['common_in']}")
-
-            st.markdown("## Trend risk")
-            tr = trend_risk(f)
-            st.write(f"**Status:** {tr['status']}")
-            st.write(tr["note"])
-
-            # 2) Reserve placeholders for the slow part
-            wait_box = st.empty()
+            # верхняя часть интерфейса
+            scan_status = st.empty()
             early_warning_box = st.empty()
             world_scan_box = st.empty()
 
-            wait_box.info("Web scan in progress... Searching for similar logo-like marks online.")
+            scan_status.info("Web scan in progress...")
 
-            # 3) Slow search starts only after useful content is already on screen
-            with st.spinner("World scan: searching the web…"):
+            with st.spinner("Searching the web for similar marks…"):
                 world_results = cached_world_scan(file_bytes, file_name)
 
             match_data = [build_match_data(r, f) for r in world_results]
@@ -286,8 +258,7 @@ with colR:
             relevant_matches = [m for m in match_data if m["is_relevant"]]
             state = warning_state(match_data)
 
-            # 4) Replace waiting state with final results
-            wait_box.empty()
+            scan_status.empty()
 
             with early_warning_box.container():
                 st.markdown("## Early warning")
@@ -312,6 +283,7 @@ with colR:
 
                 if not relevant_matches:
                     st.info("No logo-like matches found.")
+
                 else:
                     visible = relevant_matches[:VISIBLE_MATCHES]
                     extra = relevant_matches[VISIBLE_MATCHES:]
@@ -329,6 +301,25 @@ with colR:
                             for i, m in enumerate(extra):
                                 with more_cols[i % 3]:
                                     render_match_card(m)
+
+            # нижняя часть
+            st.image(img, caption="Uploaded mark", width=260)
+
+            st.markdown("## Cliché signals")
+            cliches = detect_cliches(f)
+
+            if not cliches:
+                st.success("No strong cliché signals detected.")
+            else:
+                for s in cliches:
+                    with st.expander(s["title"], expanded=True):
+                        st.write(s["desc"])
+                        st.caption(f"Common in: {s['common_in']}")
+
+            st.markdown("## Trend risk")
+            tr = trend_risk(f)
+            st.write(f"**Status:** {tr['status']}")
+            st.write(tr["note"])
 
             st.markdown("## Export")
 
