@@ -20,6 +20,11 @@ from vcd_utils import (
 from pdf_utils import make_risk_sheet_pdf
 
 
+SCAN_POOL = 12
+VISIBLE_MATCHES = 3
+WARNING_POOL = 5
+
+
 def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
     h = hashlib.sha256()
     h.update(file_name.encode("utf-8", errors="ignore"))
@@ -110,14 +115,14 @@ def thumb_features(url):
 
 
 @st.cache_data(show_spinner=False)
-def cached_world_scan(file_bytes: bytes, file_name: str, max_results: int):
+def cached_world_scan(file_bytes: bytes, file_name: str):
     """
-    Stable wrapper around world_scan:
-    - cache by exact file contents + filename + requested count
-    - avoids result drift on repeated uploads of the same logo
+    Stable web search:
+    - always fetch the same fixed pool size
+    - cache by exact file content + filename
     """
     img = load_image(file_bytes, file_name)
-    return world_scan(img, max_results=max_results)
+    return world_scan(img, max_results=SCAN_POOL)
 
 
 def build_match_data(result, uploaded_features):
@@ -160,13 +165,6 @@ def label_rank(label: str) -> int:
 
 
 def stable_sort_matches(matches):
-    """
-    Sort so the output is stable and useful:
-    1) relevant before irrelevant
-    2) High before Medium before Low
-    3) higher sim_pct first
-    4) title as final stable tie-breaker
-    """
     def sort_key(m):
         sim = m["sim_pct"] if m["sim_pct"] is not None else -1
         return (
@@ -181,16 +179,9 @@ def stable_sort_matches(matches):
 
 def warning_state(matches):
     """
-    More stable warning logic:
-    - HIGH only if:
-        * 1 relevant High + another relevant confirmation (High/Medium), OR
-        * 2 relevant High
-    - MIXED if:
-        * 1 relevant High, OR
-        * 2 relevant Medium
-    - SAFE otherwise
+    Warning is based on a fixed top pool, not on UI controls.
     """
-    relevant = [m for m in matches if m["is_relevant"]]
+    relevant = [m for m in matches if m["is_relevant"]][:WARNING_POOL]
 
     high_count = sum(1 for m in relevant if m["label"] == "High")
     medium_count = sum(1 for m in relevant if m["label"] == "Medium")
@@ -256,8 +247,6 @@ with colL:
         placeholder="human, warm, bold"
     )
 
-    world_k = st.slider("How many web matches?", 3, 15, 5)
-
     st.markdown("---")
     run = st.button("Analyze", type="primary", disabled=(up is None))
 
@@ -279,7 +268,7 @@ with colR:
             f = extract_features(img)
 
             with st.spinner("World scan: searching the web…"):
-                world_results = cached_world_scan(file_bytes, file_name, world_k)
+                world_results = cached_world_scan(file_bytes, file_name)
 
             match_data = [build_match_data(r, f) for r in world_results]
             match_data = stable_sort_matches(match_data)
@@ -310,8 +299,8 @@ with colR:
                 st.info("No logo-like matches found.")
 
             else:
-                visible = relevant_matches[:3]
-                extra = relevant_matches[3:world_k]
+                visible = relevant_matches[:VISIBLE_MATCHES]
+                extra = relevant_matches[VISIBLE_MATCHES:]
 
                 cols = st.columns(3, gap="medium")
 
