@@ -242,12 +242,26 @@ with colR:
             img = load_image(file_bytes, file_name)
             f = extract_features(img)
 
-            # верхняя часть интерфейса
-            scan_status = st.empty()
-            early_warning_box = st.empty()
-            world_scan_box = st.empty()
+            st.image(img, caption="Uploaded mark", width=260)
 
-            scan_status.info("Web scan in progress...")
+            scan_box = st.empty()
+            scan_box.info("Web scan in progress...")
+
+            st.markdown("## Cliché signals")
+            cliches = detect_cliches(f)
+
+            if not cliches:
+                st.success("No strong cliché signals detected.")
+            else:
+                for s in cliches:
+                    with st.expander(s["title"], expanded=True):
+                        st.write(s["desc"])
+                        st.caption(f"Common in: {s['common_in']}")
+
+            st.markdown("## Trend risk")
+            tr = trend_risk(f)
+            st.write(f"**Status:** {tr['status']}")
+            st.write(tr["note"])
 
             with st.spinner("Searching the web for similar marks…"):
                 world_results = cached_world_scan(file_bytes, file_name)
@@ -258,9 +272,8 @@ with colR:
             relevant_matches = [m for m in match_data if m["is_relevant"]]
             state = warning_state(match_data)
 
-            scan_status.empty()
+            with scan_box.container():
 
-            with early_warning_box.container():
                 st.markdown("## Early warning")
 
                 if state == "high":
@@ -278,12 +291,10 @@ with colR:
                         "Looks safe.\n\nNo meaningful logo-like matches found online."
                     )
 
-            with world_scan_box.container():
                 st.markdown("## 🌐 World scan (web)")
 
                 if not relevant_matches:
                     st.info("No logo-like matches found.")
-
                 else:
                     visible = relevant_matches[:VISIBLE_MATCHES]
                     extra = relevant_matches[VISIBLE_MATCHES:]
@@ -301,25 +312,6 @@ with colR:
                             for i, m in enumerate(extra):
                                 with more_cols[i % 3]:
                                     render_match_card(m)
-
-            # нижняя часть
-            st.image(img, caption="Uploaded mark", width=260)
-
-            st.markdown("## Cliché signals")
-            cliches = detect_cliches(f)
-
-            if not cliches:
-                st.success("No strong cliché signals detected.")
-            else:
-                for s in cliches:
-                    with st.expander(s["title"], expanded=True):
-                        st.write(s["desc"])
-                        st.caption(f"Common in: {s['common_in']}")
-
-            st.markdown("## Trend risk")
-            tr = trend_risk(f)
-            st.write(f"**Status:** {tr['status']}")
-            st.write(tr["note"])
 
             st.markdown("## Export")
 
