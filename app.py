@@ -16,7 +16,6 @@ from vcd_utils import (
     world_scan,
 )
 
-
 SCAN_POOL = 12
 VISIBLE_MATCHES = 3
 WARNING_POOL = 5
@@ -213,7 +212,6 @@ st.caption(
 colL, colR = st.columns([1, 2], gap="large")
 
 with colL:
-
     st.subheader("Input")
 
     up = st.file_uploader(
@@ -227,14 +225,12 @@ with colL:
 
 
 with colR:
-
     st.subheader("Report")
 
     if not up:
         st.info("Upload a mark to start.")
 
     elif run:
-
         try:
 
             file_bytes = up.getvalue()
@@ -301,7 +297,6 @@ with colR:
                 if not relevant_matches:
                     st.info("No logo-like matches found.")
                 else:
-
                     visible = relevant_matches[:VISIBLE_MATCHES]
                     extra = relevant_matches[VISIBLE_MATCHES:]
 
@@ -322,3 +317,10 @@ with colR:
         except Exception as e:
             st.error(f"Error while analyzing: {e}")
             st.stop()
+
+st.markdown("---")
+
+st.caption(
+    "Disclaimer: This tool supports creative exploration and early visual checks. "
+    "It is not a legal trademark search and does not replace professional trademark clearance."
+)
