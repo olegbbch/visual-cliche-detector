@@ -20,8 +20,8 @@ except Exception:
     _HAS_CAIRO = False
 
 
-WORLD_SCAN_TIMEOUT = 18
-CLOUDINARY_TIMEOUT = 18
+WORLD_SCAN_TIMEOUT = 12
+CLOUDINARY_TIMEOUT = 10
 
 
 @dataclass
@@ -250,13 +250,6 @@ def trend_risk(f: Features) -> Dict[str, str]:
     }
 
 
-def _domain_of(url: str) -> str:
-    try:
-        return urlparse(url).netloc.lower()
-    except Exception:
-        return ""
-
-
 def _normalize_result_item(it: dict) -> dict:
     title = it.get("title", "") or it.get("source", "") or "Result"
     link = it.get("link", "") or it.get("source", "") or ""
@@ -293,7 +286,6 @@ def _dedupe_results(items: List[dict], max_results: int) -> List[dict]:
         if key in seen:
             continue
 
-        # skip completely empty garbage rows
         if not norm["title"] and not norm["link"] and not norm["thumbnail"]:
             continue
 
@@ -304,12 +296,6 @@ def _dedupe_results(items: List[dict], max_results: int) -> List[dict]:
             break
 
     return out
-
-
-def _image_fingerprint_for_cache(img: Image.Image) -> str:
-    buf = io.BytesIO()
-    preprocess(img, 256).save(buf, format="PNG")
-    return hashlib.sha256(buf.getvalue()).hexdigest()
 
 
 @st.cache_data(show_spinner=False)
@@ -365,18 +351,7 @@ def _google_lens_search_cached(image_url: str, max_results: int) -> List[dict]:
     return _dedupe_results(items, max_results=max_results)
 
 
-def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
-    """
-    World scan via SerpAPI (Google Lens).
-    Returns list of:
-    {
-        "title": str,
-        "link": str,
-        "score": any,
-        "thumbnail": str
-    }
-    """
-
+def world_scan(img: Image.Image, max_results: int = 5) -> List[dict]:
     api_key = os.getenv("SERPAPI_KEY", "").strip()
     cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
     upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "").strip()
@@ -384,15 +359,11 @@ def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
     if not api_key or not cloud_name or not upload_preset:
         return []
 
-    # normalize before upload for stable cache + smaller payload
     normalized = preprocess(img, 512)
 
     buf = io.BytesIO()
     normalized.save(buf, format="PNG")
     image_bytes = buf.getvalue()
-
-    # fingerprint is useful for stable cache identity, even if implicit
-    _ = _image_fingerprint_for_cache(normalized)
 
     try:
         image_url = _upload_to_cloudinary_cached(image_bytes)
@@ -401,7 +372,6 @@ def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
 
         results = _google_lens_search_cached(image_url, max_results=max_results)
 
-        # deterministic ordering
         results = sorted(
             results,
             key=lambda x: (
