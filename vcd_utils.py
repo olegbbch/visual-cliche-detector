@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import hashlib
 import io
 import math
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
 
 import numpy as np
 import requests
@@ -20,8 +18,8 @@ except Exception:
     _HAS_CAIRO = False
 
 
-WORLD_SCAN_TIMEOUT = 12
-CLOUDINARY_TIMEOUT = 10
+WORLD_SCAN_TIMEOUT = 20
+CLOUDINARY_TIMEOUT = 20
 
 
 @dataclass
@@ -351,7 +349,7 @@ def _google_lens_search_cached(image_url: str, max_results: int) -> List[dict]:
     return _dedupe_results(items, max_results=max_results)
 
 
-def world_scan(img: Image.Image, max_results: int = 5) -> List[dict]:
+def world_scan(img: Image.Image, max_results: int = 8) -> List[dict]:
     api_key = os.getenv("SERPAPI_KEY", "").strip()
     cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
     upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "").strip()
@@ -372,15 +370,8 @@ def world_scan(img: Image.Image, max_results: int = 5) -> List[dict]:
 
         results = _google_lens_search_cached(image_url, max_results=max_results)
 
-        results = sorted(
-            results,
-            key=lambda x: (
-                (x.get("title") or "").lower(),
-                (x.get("link") or "").lower(),
-                (x.get("thumbnail") or "").lower(),
-            ),
-        )
-
+        # Важно: сохраняем исходный порядок Google Lens,
+        # не сортируем результаты сами.
         return results[:max_results]
 
     except Exception:
