@@ -200,13 +200,13 @@ def render_match_card(match):
         st.markdown(f"[Source]({match['link']})")
 
 
-APP_TITLE = "Visual Cliché Detector (MVP)"
+APP_TITLE = "LogoRadar"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.title(APP_TITLE)
 
 st.caption(
-    "Designer early warning system: web similarity + cliché signals + trend risk."
+    "Early warning system for logo similarity, cliché signals and trend risk."
 )
 
 colL, colR = st.columns([1, 2], gap="large")
@@ -232,7 +232,6 @@ with colR:
 
     elif run:
         try:
-
             file_bytes = up.getvalue()
             file_name = up.name
 
@@ -274,19 +273,16 @@ with colR:
             state = warning_state(match_data)
 
             with scan_box.container():
-
                 st.markdown("## Early warning")
 
                 if state == "high":
                     st.warning(
                         "⚠️ Designer, be careful\n\nStrong logo-like visual overlap was found online."
                     )
-
                 elif state == "mixed":
                     st.info(
                         "Some potentially relevant logo-like matches were found."
                     )
-
                 else:
                     st.success(
                         "Looks safe.\n\nNo meaningful logo-like matches found online."
