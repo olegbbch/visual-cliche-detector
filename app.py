@@ -33,13 +33,13 @@ def inject_ui_css():
         :root {
             --bg: #f5f7fb;
             --surface: #ffffff;
-            --surface-2: #f9fbff;
             --line: #dbe5f0;
-            --text: #0f172a;
-            --muted: #5b6472;
+            --text: #111111;
+            --muted: #5f6673;
+            --black: #111111;
+            --black-2: #222222;
+            --soft-black: #f2f2f2;
             --blue: #2563eb;
-            --blue-2: #1d4ed8;
-            --blue-soft: #eef4ff;
             --green: #15803d;
             --green-soft: #eefbf3;
             --red: #dc2626;
@@ -55,14 +55,16 @@ def inject_ui_css():
         }
 
         .stApp {
-            background: linear-gradient(180deg, #f7f9fc 0%, #f3f6fb 100%);
+            background: linear-gradient(180deg, #f8f9fc 0%, #f3f5f9 100%);
             color: var(--text);
         }
 
         .block-container {
-            max-width: 1360px;
-            padding-top: 2rem;
-            padding-bottom: 2.5rem;
+            max-width: 1580px;
+            padding-top: 1.1rem;
+            padding-bottom: 2.2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
         }
 
         h1, h2, h3 {
@@ -71,25 +73,31 @@ def inject_ui_css():
 
         h1 {
             font-weight: 800 !important;
-            font-size: 2.25rem !important;
+            font-size: 2.15rem !important;
+            margin-top: 0 !important;
             margin-bottom: 0.35rem !important;
+            line-height: 1.05 !important;
         }
 
         h2 {
             font-weight: 700 !important;
-            margin-top: 0.3rem !important;
+            font-size: 1.42rem !important;
+            margin-top: 0.2rem !important;
+            margin-bottom: 0.7rem !important;
         }
 
         h3 {
             font-weight: 700 !important;
+            font-size: 1.08rem !important;
         }
 
         p, li, div[data-testid="stMarkdownContainer"] {
             color: var(--text);
+            font-size: 1rem;
         }
 
         div[data-testid="stHorizontalBlock"] {
-            gap: 1.5rem;
+            gap: 1.6rem;
         }
 
         div[data-testid="stFileUploader"] > label,
@@ -98,55 +106,63 @@ def inject_ui_css():
         }
 
         div[data-testid="stFileUploaderDropzone"] {
-            background: rgba(255,255,255,0.92);
-            border: 1.5px dashed #bfd0e6 !important;
+            background: rgba(255,255,255,0.95);
+            border: 1.5px dashed #c6d2e1 !important;
             border-radius: 24px !important;
-            min-height: 210px !important;
-            padding: 1.35rem 1.25rem !important;
+            min-height: 290px !important;
+            padding: 1.7rem 1.4rem !important;
             box-shadow: var(--shadow);
             transition: all 0.18s ease;
         }
 
         div[data-testid="stFileUploaderDropzone"]:hover {
-            border-color: #7aa6ff !important;
-            background: #fbfdff;
+            border-color: #97a9bf !important;
+            background: #fcfdff;
+        }
+
+        div[data-testid="stFileUploaderDropzone"] * {
+            font-size: 1rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] small {
             color: var(--muted) !important;
+            font-size: 0.96rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] button {
             border-radius: 999px !important;
-            min-height: 48px !important;
-            padding: 0.75rem 1.1rem !important;
-            border: 1px solid #c8d7ea !important;
-            background: #ffffff !important;
+            min-height: 50px !important;
+            padding: 0.78rem 1.18rem !important;
+            border: 1px solid #d3d9e2 !important;
+            background: white !important;
             color: var(--text) !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
+            font-size: 0.98rem !important;
         }
 
         div[data-testid="stButton"] > button {
             width: 100%;
-            min-height: 56px;
+            min-height: 60px;
             border-radius: 16px;
-            border: 0 !important;
-            background: linear-gradient(180deg, #2f6df6 0%, #245ce0 100%) !important;
+            border: 1px solid #111111 !important;
+            background: #111111 !important;
             color: white !important;
-            font-size: 1rem !important;
+            font-size: 1.02rem !important;
             font-weight: 700 !important;
-            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
-            transition: transform 0.12s ease, box-shadow 0.12s ease;
+            letter-spacing: -0.01em;
+            box-shadow: none;
+            transition: transform 0.12s ease, background 0.12s ease;
         }
 
         div[data-testid="stButton"] > button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+            background: #222222 !important;
         }
 
         div[data-testid="stButton"] > button:disabled {
-            opacity: 0.45;
-            box-shadow: none;
+            opacity: 0.42;
+            background: #111111 !important;
+            color: white !important;
         }
 
         div[data-testid="stAlert"] {
@@ -163,32 +179,33 @@ def inject_ui_css():
         }
 
         .lr-brand-fallback {
-            font-size: 2.15rem;
+            font-size: 2rem;
             font-weight: 800;
             letter-spacing: -0.03em;
-            color: #0f172a;
+            color: #111111;
             line-height: 1;
         }
 
         .lr-brand-logo {
-            max-height: 40px;
+            max-height: 38px;
             width: auto;
             display: block;
         }
 
         .lr-subtitle {
             color: var(--muted);
-            font-size: 0.98rem;
-            margin-bottom: 1rem;
+            font-size: 1.02rem;
+            margin-bottom: 1.1rem;
+            line-height: 1.45;
         }
 
         .lr-section-gap {
-            height: 12px;
+            height: 14px;
         }
 
         .lr-scan-pending {
-            background: linear-gradient(180deg, #f7faff 0%, #eef4ff 100%);
-            border: 1px solid #d6e4ff;
+            background: #f3f5f8;
+            border: 1px solid #e0e5eb;
             border-radius: 18px;
             padding: 1rem 1rem 0.95rem 1rem;
             margin: 0.25rem 0 1rem 0;
@@ -197,44 +214,46 @@ def inject_ui_css():
 
         .lr-scan-pending-title {
             font-weight: 700;
-            color: #17356f;
+            color: #111111;
             margin-bottom: 0.2rem;
+            font-size: 1rem;
         }
 
         .lr-scan-pending-note {
-            color: #4f5d75;
-            font-size: 0.92rem;
+            color: #5c6470;
+            font-size: 0.96rem;
         }
 
         .lr-signal-card {
-            background: rgba(255,255,255,0.92);
+            background: rgba(255,255,255,0.95);
             border: 1px solid var(--line);
             border-radius: 18px;
-            padding: 0.95rem 1rem;
-            margin-bottom: 0.7rem;
+            padding: 1rem 1rem;
+            margin-bottom: 0.8rem;
             box-shadow: var(--shadow);
         }
 
         .lr-signal-title {
             font-weight: 700;
-            margin-bottom: 0.22rem;
+            margin-bottom: 0.28rem;
             color: var(--text);
+            font-size: 1rem;
         }
 
         .lr-signal-desc {
             color: var(--muted);
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 0.45rem;
+            font-size: 0.99rem;
+            line-height: 1.55;
+            margin-bottom: 0.5rem;
         }
 
         .lr-signal-meta {
             color: #6b7280;
-            font-size: 0.82rem;
+            font-size: 0.86rem;
         }
 
         .lr-trend-card {
-            background: rgba(255,255,255,0.92);
+            background: rgba(255,255,255,0.95);
             border: 1px solid var(--line);
             border-radius: 18px;
             padding: 1rem;
@@ -246,10 +265,10 @@ def inject_ui_css():
             display: inline-flex;
             align-items: center;
             border-radius: 999px;
-            padding: 0.34rem 0.72rem;
-            font-size: 0.8rem;
+            padding: 0.36rem 0.78rem;
+            font-size: 0.82rem;
             font-weight: 700;
-            margin-bottom: 0.65rem;
+            margin-bottom: 0.7rem;
             border: 1px solid transparent;
         }
 
@@ -278,35 +297,35 @@ def inject_ui_css():
         }
 
         .lr-match-card {
-            background: rgba(255,255,255,0.95);
+            background: rgba(255,255,255,0.98);
             border: 1px solid var(--line);
             border-radius: 20px;
-            padding: 0.9rem;
+            padding: 0.95rem;
             box-shadow: var(--shadow);
             height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            gap: 0.7rem;
-            min-height: 345px;
+            gap: 0.75rem;
+            min-height: 360px;
         }
 
         .lr-match-thumb {
             width: 100%;
-            height: 170px;
+            height: 180px;
             object-fit: contain;
             border-radius: 14px;
             background: #f8fafc;
             border: 1px solid #ecf1f7;
-            padding: 10px;
+            padding: 12px;
         }
 
         .lr-match-title {
-            font-size: 0.95rem;
+            font-size: 0.98rem;
             font-weight: 700;
-            line-height: 1.35;
+            line-height: 1.4;
             color: var(--text);
-            min-height: 2.6em;
+            min-height: 2.8em;
             overflow: hidden;
         }
 
@@ -320,7 +339,7 @@ def inject_ui_css():
 
         .lr-match-domain {
             color: var(--muted);
-            font-size: 0.82rem;
+            font-size: 0.86rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -329,12 +348,12 @@ def inject_ui_css():
 
         .lr-source-link {
             margin-top: auto;
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             font-weight: 600;
         }
 
         .lr-source-link a {
-            color: var(--blue-2);
+            color: #111111;
             text-decoration: none;
         }
 
@@ -343,15 +362,15 @@ def inject_ui_css():
         }
 
         .lr-divider {
-            margin-top: 1.6rem;
+            margin-top: 1.8rem;
             padding-top: 1rem;
             border-top: 1px solid #dbe5f0;
         }
 
         .lr-disclaimer {
             color: #6b7280;
-            font-size: 0.82rem;
-            line-height: 1.55;
+            font-size: 0.86rem;
+            line-height: 1.6;
             max-width: 900px;
             padding-top: 0.2rem;
         }
@@ -359,12 +378,18 @@ def inject_ui_css():
         .stExpander {
             border: 1px solid var(--line) !important;
             border-radius: 16px !important;
-            background: rgba(255,255,255,0.88) !important;
+            background: rgba(255,255,255,0.92) !important;
             box-shadow: none !important;
         }
 
         .stExpander details summary {
             font-weight: 600 !important;
+            font-size: 0.98rem !important;
+        }
+
+        div[data-testid="stImageCaption"] {
+            font-size: 0.95rem !important;
+            color: var(--muted) !important;
         }
         </style>
         """,
@@ -384,7 +409,6 @@ def proximity_label(sim_pct):
         s = float(sim_pct)
     except Exception:
         return "Unknown"
-
     if s >= 60:
         return "High"
     if s >= 40:
@@ -534,7 +558,6 @@ def stable_sort_matches(matches):
             -sim,
             m["title"].lower(),
         )
-
     return sorted(matches, key=sort_key)
 
 
@@ -600,15 +623,8 @@ def render_match_card(match):
     domain = domain_of(link)
     badge_class = proximity_badge_class(label)
 
-    thumb_html = ""
-    if thumb:
-        thumb_html = f'<img class="lr-match-thumb" src="{thumb}" alt="{title}">'
-    else:
-        thumb_html = '<div class="lr-match-thumb"></div>'
-
-    source_html = ""
-    if link:
-        source_html = f'<div class="lr-source-link"><a href="{link}" target="_blank">Open source</a></div>'
+    thumb_html = f'<img class="lr-match-thumb" src="{thumb}" alt="{title}">' if thumb else '<div class="lr-match-thumb"></div>'
+    source_html = f'<div class="lr-source-link"><a href="{link}" target="_blank">Open source</a></div>' if link else ""
 
     st.markdown(
         f"""
@@ -652,9 +668,8 @@ def render_trend_card(tr):
     )
 
 
-inject_ui_css()
-
 st.set_page_config(page_title=APP_TITLE, layout="wide")
+inject_ui_css()
 
 render_logo_brand()
 st.markdown(
@@ -692,7 +707,7 @@ with colR:
             img = load_image(file_bytes, file_name)
             f = extract_features(img)
 
-            st.image(img, caption="Uploaded mark", width=280)
+            st.image(img, caption="Uploaded mark", width=300)
 
             scan_box = st.empty()
 
