@@ -36,7 +36,6 @@ def inject_ui_css():
             --line: #dbe5f0;
             --text: #111111;
             --muted: #5f6673;
-            --black: #111111;
             --green: #15803d;
             --green-soft: #eefbf3;
             --red: #dc2626;
@@ -57,7 +56,7 @@ def inject_ui_css():
 
         .block-container {
             max-width: 1580px;
-            padding-top: 4.2rem;
+            padding-top: 3rem;
             padding-bottom: 2.2rem;
             padding-left: 2rem;
             padding-right: 2rem;
@@ -105,17 +104,20 @@ def inject_ui_css():
             width: 100%;
         }
 
+        /* Важно: section НЕ растягиваем */
         div[data-testid="stFileUploader"] section {
-            min-height: 1000px !important;
+            min-height: unset !important;
+            height: auto !important;
         }
 
+        /* Растягиваем только сам dropzone */
         div[data-testid="stFileUploaderDropzone"] {
             background: rgba(255,255,255,0.95);
             border: 1.5px dashed #c6d2e1 !important;
             border-radius: 24px !important;
-            min-height: 250px !important;
-            height: 250px !important;
-            padding: 2.2rem 1.6rem !important;
+            min-height: 320px !important;
+            height: 320px !important;
+            padding: 1.8rem 1.4rem !important;
             box-shadow: var(--shadow);
             transition: all 0.18s ease;
             display: flex !important;
@@ -129,35 +131,36 @@ def inject_ui_css():
         }
 
         div[data-testid="stFileUploaderDropzone"] > div {
-            min-height: 100% !important;
-            height: 100% !important;
             width: 100% !important;
+            height: 100% !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
         }
 
-        div[data-testid="stFileUploaderDropzone"] [data-testid="stFileUploaderDropzoneInstructions"] {
-            min-height: 100% !important;
+        div[data-testid="stFileUploaderDropzoneInstructions"] {
+            width: 100% !important;
             height: 100% !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
+            text-align: center !important;
+            gap: 0.35rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] * {
-            font-size: 1.06rem !important;
+            font-size: 1.04rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] small {
             color: var(--muted) !important;
-            font-size: 1rem !important;
+            font-size: 0.98rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] button {
             border-radius: 999px !important;
-            min-height: 54px !important;
+            min-height: 52px !important;
             padding: 0.9rem 1.28rem !important;
             border: 1px solid #d3d9e2 !important;
             background: white !important;
@@ -206,7 +209,7 @@ def inject_ui_css():
             align-items: center;
             gap: 14px;
             margin-bottom: 0.2rem;
-            margin-top: 0.4rem;
+            margin-top: 0.2rem;
         }
 
         .lr-brand-fallback {
@@ -226,7 +229,7 @@ def inject_ui_css():
         .lr-subtitle {
             color: var(--muted);
             font-size: 1.02rem;
-            margin-bottom: 1.35rem;
+            margin-bottom: 1.2rem;
             line-height: 1.45;
         }
 
@@ -428,6 +431,25 @@ def inject_ui_css():
     )
 
 
+def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
+    h = hashlib.sha256()
+    h.update(file_name.encode("utf-8", errors="ignore"))
+    h.update(file_bytes)
+    return h.hexdigest()
+
+
+def proximity_label(sim_pct):
+    try:
+        s = float(sim_pct)
+    except Exception:
+        return "Unknown"
+    if s >= 60:
+        return "High"
+    if s >= 40:
+        return "Medium"
+    return "Low"
+
+
 def proximity_badge_class(label: str) -> str:
     if label == "High":
         return "lr-badge-red"
@@ -445,6 +467,149 @@ def trend_badge_class(status: str) -> str:
     if s in {"rising"}:
         return "lr-badge-amber"
     return "lr-badge-neutral"
+
+
+def domain_of(url: str):
+    try:
+        return urlparse(url).netloc.lower()
+    except Exception:
+        return ""
+
+
+def title_is_noise(title: str, link: str):
+    text = f"{title} {link}".lower()
+
+    noisy_terms = [
+        "youtube", "youtu.be", "reddit", "pinterest", "tiktok", "facebook",
+        "instagram", "shutterstock", "freepik", "clipart", "meme",
+        "tutorial", "how to", "exercise", "lyrics", "song", "video",
+        "drawing", "sketch", "doodle", "cartoon", "illustration", "wallpaper",
+        "diagram", "schematic", "process", "step by step",
+    ]
+
+    noisy_domains = [
+        "youtube.com", "youtu.be", "reddit.com", "pinterest.com",
+        "tiktok.com", "facebook.com", "instagram.com",
+    ]
+
+    if any(t in text for t in noisy_terms):
+        return True
+
+    dom = domain_of(link)
+    if any(d in dom for d in noisy_domains):
+        return True
+
+    return False
+
+
+def title_is_logo_like(title: str, link: str):
+    text = f"{title} {link}".lower()
+
+    logo_terms = [
+        "logo", "brand", "branding", "identity", "company", "official",
+        "inc", "ltd", "llc", "group", "studio", "agency", "services",
+        "hospitality", "design", "projects", "portfolio", "case study",
+        "help center", "about us",
+    ]
+
+    brand_domains = [
+        "1000logos", "behance", "dribbble", "brandsoftheworld",
+        "logowik", "logos-world", "crunchbase", "linkedin",
+    ]
+
+    if any(t in text for t in logo_terms):
+        return True
+
+    dom = domain_of(link)
+    if any(d in dom for d in brand_domains):
+        return True
+
+    return False
+
+
+@st.cache_data(show_spinner=False)
+def thumb_features(url):
+    try:
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        im = Image.open(io.BytesIO(r.content)).convert("RGBA")
+        return extract_features(im)
+    except Exception:
+        return None
+
+
+@st.cache_data(show_spinner=False)
+def cached_world_scan(file_bytes: bytes, file_name: str):
+    img = load_image(file_bytes, file_name)
+    return world_scan(img, max_results=SCAN_POOL)
+
+
+def build_match_data(result, uploaded_features):
+    thumb = result.get("thumbnail", "")
+    title = result.get("title", "") or "Result"
+    link = result.get("link", "")
+
+    sim_pct = None
+    if thumb:
+        tf = thumb_features(thumb)
+        if tf is not None:
+            sim_pct, _ = similarity_to_set(uploaded_features, [tf])
+
+    label = proximity_label(sim_pct if sim_pct is not None else 0)
+
+    is_noise = title_is_noise(title, link)
+    is_logo_like = title_is_logo_like(title, link)
+    is_relevant = (not is_noise) and is_logo_like
+
+    return {
+        "thumb": thumb,
+        "title": title,
+        "link": link,
+        "label": label,
+        "sim_pct": sim_pct,
+        "is_relevant": is_relevant,
+        "is_noise": is_noise,
+        "is_logo_like": is_logo_like,
+    }
+
+
+def label_rank(label: str) -> int:
+    order = {
+        "High": 0,
+        "Medium": 1,
+        "Low": 2,
+        "Unknown": 3,
+    }
+    return order.get(label, 99)
+
+
+def stable_sort_matches(matches):
+    def sort_key(m):
+        sim = m["sim_pct"] if m["sim_pct"] is not None else -1
+        return (
+            0 if m["is_relevant"] else 1,
+            label_rank(m["label"]),
+            -sim,
+            m["title"].lower(),
+        )
+    return sorted(matches, key=sort_key)
+
+
+def warning_state(matches):
+    relevant = [m for m in matches if m["is_relevant"]][:WARNING_POOL]
+
+    high_count = sum(1 for m in relevant if m["label"] == "High")
+    medium_count = sum(1 for m in relevant if m["label"] == "Medium")
+
+    if high_count >= 2:
+        return "high"
+    if high_count >= 1 and (high_count + medium_count) >= 2:
+        return "high"
+    if high_count >= 1:
+        return "mixed"
+    if medium_count >= 2:
+        return "mixed"
+    return "safe"
 
 
 def render_logo_brand():
