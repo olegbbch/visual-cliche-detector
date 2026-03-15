@@ -171,7 +171,7 @@ def inject_ui_css():
             background: #111111 !important;
             color: #ffffff !important;
             -webkit-text-fill-color: #ffffff !important;
-            font-size: 1.32rem !important;
+            font-size: 1.7rem !important;
             font-weight: 600 !important;
             letter-spacing: -0.01em;
             box-shadow: none;
