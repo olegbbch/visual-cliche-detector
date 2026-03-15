@@ -61,7 +61,7 @@ def inject_ui_css():
 
         .block-container {
             max-width: 1580px;
-            padding-top: 1.1rem;
+            padding-top: 4.2rem;
             padding-bottom: 2.2rem;
             padding-left: 2rem;
             padding-right: 2rem;
@@ -109,10 +109,13 @@ def inject_ui_css():
             background: rgba(255,255,255,0.95);
             border: 1.5px dashed #c6d2e1 !important;
             border-radius: 24px !important;
-            min-height: 290px !important;
-            padding: 1.7rem 1.4rem !important;
+            min-height: 520px !important;
+            padding: 2.2rem 1.6rem !important;
             box-shadow: var(--shadow);
             transition: all 0.18s ease;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         div[data-testid="stFileUploaderDropzone"]:hover {
@@ -121,23 +124,23 @@ def inject_ui_css():
         }
 
         div[data-testid="stFileUploaderDropzone"] * {
-            font-size: 1rem !important;
+            font-size: 1.06rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] small {
             color: var(--muted) !important;
-            font-size: 0.96rem !important;
+            font-size: 1rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] button {
             border-radius: 999px !important;
-            min-height: 50px !important;
-            padding: 0.78rem 1.18rem !important;
+            min-height: 54px !important;
+            padding: 0.9rem 1.28rem !important;
             border: 1px solid #d3d9e2 !important;
             background: white !important;
             color: var(--text) !important;
             font-weight: 700 !important;
-            font-size: 0.98rem !important;
+            font-size: 1rem !important;
         }
 
         div[data-testid="stButton"] > button {
@@ -146,7 +149,8 @@ def inject_ui_css():
             border-radius: 16px;
             border: 1px solid #111111 !important;
             background: #111111 !important;
-            color: white !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
             font-size: 1.02rem !important;
             font-weight: 700 !important;
             letter-spacing: -0.01em;
@@ -157,12 +161,15 @@ def inject_ui_css():
         div[data-testid="stButton"] > button:hover {
             transform: translateY(-1px);
             background: #222222 !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
 
         div[data-testid="stButton"] > button:disabled {
             opacity: 0.42;
             background: #111111 !important;
-            color: white !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
 
         div[data-testid="stAlert"] {
@@ -175,7 +182,8 @@ def inject_ui_css():
             display: flex;
             align-items: center;
             gap: 14px;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.2rem;
+            margin-top: 0.4rem;
         }
 
         .lr-brand-fallback {
@@ -195,7 +203,7 @@ def inject_ui_css():
         .lr-subtitle {
             color: var(--muted);
             font-size: 1.02rem;
-            margin-bottom: 1.1rem;
+            margin-bottom: 1.35rem;
             line-height: 1.45;
         }
 
