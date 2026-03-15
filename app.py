@@ -83,7 +83,7 @@ def inject_ui_css():
 
         h3 {
             font-weight: 700 !important;
-            font-size: 1.18rem !important;
+            font-size: 1.72rem !important;
         }
 
         p, li, div[data-testid="stMarkdownContainer"] {
@@ -104,13 +104,11 @@ def inject_ui_css():
             width: 100%;
         }
 
-        /* Важно: section НЕ растягиваем */
         div[data-testid="stFileUploader"] section {
             min-height: unset !important;
             height: auto !important;
         }
 
-        /* Растягиваем только сам dropzone */
         div[data-testid="stFileUploaderDropzone"] {
             background: rgba(255,255,255,0.95);
             border: 1.5px dashed #c6d2e1 !important;
@@ -177,7 +175,7 @@ def inject_ui_css():
             background: #111111 !important;
             color: #ffffff !important;
             -webkit-text-fill-color: #ffffff !important;
-            font-size: 1.26rem !important;
+            font-size: 1.64rem !important;
             font-weight: 700 !important;
             letter-spacing: -0.01em;
             box-shadow: none;
