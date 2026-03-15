@@ -68,7 +68,7 @@ def inject_ui_css():
 
         h1 {
             font-weight: 800 !important;
-            font-size: 2.15rem !important;
+            font-size: 2.3rem !important;
             margin-top: 0 !important;
             margin-bottom: 0.35rem !important;
             line-height: 1.05 !important;
@@ -76,19 +76,19 @@ def inject_ui_css():
 
         h2 {
             font-weight: 700 !important;
-            font-size: 1.42rem !important;
+            font-size: 1.56rem !important;
             margin-top: 0.2rem !important;
             margin-bottom: 0.7rem !important;
         }
 
         h3 {
             font-weight: 700 !important;
-            font-size: 1.08rem !important;
+            font-size: 1.18rem !important;
         }
 
         p, li, div[data-testid="stMarkdownContainer"] {
             color: var(--text);
-            font-size: 1rem;
+            font-size: 1.08rem;
         }
 
         div[data-testid="stHorizontalBlock"] {
@@ -150,12 +150,12 @@ def inject_ui_css():
         }
 
         div[data-testid="stFileUploaderDropzone"] * {
-            font-size: 1.04rem !important;
+            font-size: 1.14rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] small {
             color: var(--muted) !important;
-            font-size: 0.98rem !important;
+            font-size: 1.06rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] button {
@@ -166,7 +166,7 @@ def inject_ui_css():
             background: white !important;
             color: var(--text) !important;
             font-weight: 700 !important;
-            font-size: 1rem !important;
+            font-size: 1.08rem !important;
         }
 
         div[data-testid="stButton"] > button {
@@ -177,7 +177,7 @@ def inject_ui_css():
             background: #111111 !important;
             color: #ffffff !important;
             -webkit-text-fill-color: #ffffff !important;
-            font-size: 1.02rem !important;
+            font-size: 1.26rem !important;
             font-weight: 700 !important;
             letter-spacing: -0.01em;
             box-shadow: none;
@@ -213,7 +213,7 @@ def inject_ui_css():
         }
 
         .lr-brand-fallback {
-            font-size: 2rem;
+            font-size: 2.15rem;
             font-weight: 800;
             letter-spacing: -0.03em;
             color: #111111;
@@ -228,7 +228,7 @@ def inject_ui_css():
 
         .lr-subtitle {
             color: var(--muted);
-            font-size: 1.02rem;
+            font-size: 1.12rem;
             margin-bottom: 1.2rem;
             line-height: 1.45;
         }
@@ -250,12 +250,12 @@ def inject_ui_css():
             font-weight: 700;
             color: #111111;
             margin-bottom: 0.2rem;
-            font-size: 1rem;
+            font-size: 1.12rem;
         }
 
         .lr-scan-pending-note {
             color: #5c6470;
-            font-size: 0.96rem;
+            font-size: 1.04rem;
         }
 
         .lr-signal-card {
@@ -271,19 +271,19 @@ def inject_ui_css():
             font-weight: 700;
             margin-bottom: 0.28rem;
             color: var(--text);
-            font-size: 1rem;
+            font-size: 1.14rem;
         }
 
         .lr-signal-desc {
             color: var(--muted);
-            font-size: 0.99rem;
+            font-size: 1.08rem;
             line-height: 1.55;
             margin-bottom: 0.5rem;
         }
 
         .lr-signal-meta {
             color: #6b7280;
-            font-size: 0.86rem;
+            font-size: 0.98rem;
         }
 
         .lr-trend-card {
@@ -300,7 +300,7 @@ def inject_ui_css():
             align-items: center;
             border-radius: 999px;
             padding: 0.36rem 0.78rem;
-            font-size: 0.82rem;
+            font-size: 0.96rem;
             font-weight: 700;
             margin-bottom: 0.7rem;
             border: 1px solid transparent;
@@ -355,7 +355,7 @@ def inject_ui_css():
         }
 
         .lr-match-title {
-            font-size: 0.98rem;
+            font-size: 1.18rem;
             font-weight: 700;
             line-height: 1.4;
             color: var(--text);
@@ -373,7 +373,7 @@ def inject_ui_css():
 
         .lr-match-domain {
             color: var(--muted);
-            font-size: 0.86rem;
+            font-size: 1rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -382,7 +382,7 @@ def inject_ui_css():
 
         .lr-source-link {
             margin-top: auto;
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 600;
         }
 
@@ -403,7 +403,7 @@ def inject_ui_css():
 
         .lr-disclaimer {
             color: #6b7280;
-            font-size: 0.86rem;
+            font-size: 0.96rem;
             line-height: 1.6;
             max-width: 900px;
             padding-top: 0.2rem;
@@ -418,11 +418,11 @@ def inject_ui_css():
 
         .stExpander details summary {
             font-weight: 600 !important;
-            font-size: 0.98rem !important;
+            font-size: 1.06rem !important;
         }
 
         div[data-testid="stImageCaption"] {
-            font-size: 0.95rem !important;
+            font-size: 1rem !important;
             color: var(--muted) !important;
         }
         </style>
