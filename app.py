@@ -30,102 +30,175 @@ def inject_ui_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        :root {
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --line: #dbe5f0;
+            --text: #111111;
+            --muted: #5f6673;
+            --green: #15803d;
+            --green-soft: #eefbf3;
+            --red: #dc2626;
+            --red-soft: #fff2f2;
+            --amber: #b45309;
+            --amber-soft: #fff8eb;
+            --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
+        }
+
+        .stApp {
+            background: linear-gradient(180deg, #f8f9fc 0%, #f3f5f9 100%);
+            color: var(--text);
         }
 
         .block-container {
             max-width: 1580px;
             padding-top: 3rem;
+            padding-bottom: 2.2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        h1, h2, h3 {
+            letter-spacing: -0.02em;
         }
 
         h1 {
             font-weight: 800 !important;
-            font-size: 2.3rem !important;
+            font-size: 2.15rem !important;
+            margin-top: 0 !important;
+            margin-bottom: 0.35rem !important;
+            line-height: 1.05 !important;
         }
 
         h2 {
-            font-size: 1.6rem !important;
+            font-weight: 700 !important;
+            font-size: 1.42rem !important;
+            margin-top: 0.2rem !important;
+            margin-bottom: 0.7rem !important;
         }
 
         h3 {
-            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            font-size: 1.08rem !important;
         }
 
-        /* DROPZONE */
+        p, li, div[data-testid="stMarkdownContainer"] {
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        div[data-testid="stHorizontalBlock"] {
+            gap: 1.6rem;
+        }
+
+        div[data-testid="stFileUploader"] > label,
+        div[data-testid="stButton"] > label {
+            display: none !important;
+        }
+
+        div[data-testid="stFileUploader"] {
+            width: 100%;
+        }
+
+        div[data-testid="stFileUploader"] section {
+            min-height: unset !important;
+            height: auto !important;
+        }
 
         div[data-testid="stFileUploaderDropzone"] {
-            background: white;
+            background: rgba(255,255,255,0.95);
             border: 1.5px dashed #c6d2e1 !important;
             border-radius: 24px !important;
             min-height: 420px !important;
             height: 420px !important;
             padding: 1.8rem 1.4rem !important;
+            box-shadow: var(--shadow);
+            transition: all 0.18s ease;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
         }
 
+        div[data-testid="stFileUploaderDropzone"]:hover {
+            border-color: #97a9bf !important;
+            background: #fcfdff;
+        }
+
+        div[data-testid="stFileUploaderDropzone"] > div {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        div[data-testid="stFileUploaderDropzoneInstructions"] {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            gap: 0.35rem !important;
+        }
+
         div[data-testid="stFileUploaderDropzone"] * {
-            font-size: 1.2rem !important;
+            font-size: 1.04rem !important;
         }
 
         div[data-testid="stFileUploaderDropzone"] small {
-            font-size: 1.05rem !important;
+            color: var(--muted) !important;
+            font-size: 0.98rem !important;
         }
-
-        /* BROWSE BUTTON */
 
         div[data-testid="stFileUploaderDropzone"] button {
-            font-size: 1.1rem !important;
-            min-height: 56px !important;
-            padding: 1rem 1.4rem !important;
             border-radius: 999px !important;
+            min-height: 52px !important;
+            padding: 0.9rem 1.28rem !important;
+            border: 1px solid #d3d9e2 !important;
+            background: white !important;
+            color: var(--text) !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
         }
-
-        /* ANALYZE BUTTON */
 
         div[data-testid="stButton"] > button {
             width: 100%;
-            min-height: 70px;
+            min-height: 60px;
             border-radius: 16px;
-            border: 1px solid #111 !important;
-            background: #111 !important;
-            color: white !important;
-
-            font-size: 1.3rem !important;
+            border: 1px solid #111111 !important;
+            background: #111111 !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            font-size: 1.02rem !important;
             font-weight: 700 !important;
             letter-spacing: -0.01em;
+            box-shadow: none;
+            transition: transform 0.12s ease, background 0.12s ease;
         }
 
-        /* MATCH CARDS */
-
-        .lr-match-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            line-height: 1.4;
+        div[data-testid="stButton"] > button:hover {
+            transform: translateY(-1px);
+            background: #222222 !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
 
-        .lr-match-domain {
-            font-size: 1rem;
+        div[data-testid="stButton"] > button:disabled {
+            opacity: 0.42;
+            background: #111111 !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
-
-        .lr-badge {
-            font-size: 0.95rem;
-            padding: 0.45rem 0.9rem;
-        }
-
         </style>
         """,
         unsafe_allow_html=True,
     )
-
-
-def file_fingerprint(file_bytes: bytes, file_name: str) -> str:
-    h = hashlib.sha256()
-    h.update(file_name.encode("utf-8", errors="ignore"))
-    h.update(file_bytes)
-    return h.hexdigest()
 
 
 def proximity_label(sim_pct):
@@ -133,7 +206,6 @@ def proximity_label(sim_pct):
         s = float(sim_pct)
     except Exception:
         return "Unknown"
-
     if s >= 60:
         return "High"
     if s >= 40:
@@ -151,7 +223,7 @@ def domain_of(url: str):
 @st.cache_data(show_spinner=False)
 def thumb_features(url):
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
         im = Image.open(io.BytesIO(r.content)).convert("RGBA")
         return extract_features(im)
@@ -202,11 +274,11 @@ def render_match_card(match):
 
         <img src="{thumb}" style="width:100%;height:180px;object-fit:contain">
 
-        <div class="lr-match-title">{title}</div>
+        <div style="font-weight:700;margin-top:8px">{title}</div>
 
-        <div class="lr-match-domain">{domain}</div>
+        <div style="color:#6b7280;font-size:.85rem">{domain}</div>
 
-        <div style="margin-top:6px;font-weight:700;font-size:1.05rem">
+        <div style="margin-top:6px;font-weight:600">
         Proximity: {label}
         </div>
 
