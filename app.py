@@ -113,8 +113,8 @@ def inject_ui_css():
             background: rgba(255,255,255,0.95);
             border: 1.5px dashed #c6d2e1 !important;
             border-radius: 24px !important;
-            min-height: 1000px !important;
-            height: 1000px !important;
+            min-height: 250px !important;
+            height: 250px !important;
             padding: 2.2rem 1.6rem !important;
             box-shadow: var(--shadow);
             transition: all 0.18s ease;
