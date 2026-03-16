@@ -223,7 +223,8 @@ def inject_ui_css():
         .lr-subtitle {
             color: var(--muted);
             font-size: 1.12rem;
-            margin-bottom: 1.2rem;
+            margin-top: 4px;
+            margin-bottom: 1.6rem;
             line-height: 1.45;
         }
 
