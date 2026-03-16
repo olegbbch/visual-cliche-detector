@@ -215,7 +215,7 @@ def inject_ui_css():
         }
 
         .lr-brand-logo {
-            max-height: 60px;
+            max-height: 66px;
             width: auto;
             display: block;
         }
