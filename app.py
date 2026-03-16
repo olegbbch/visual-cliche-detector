@@ -608,7 +608,7 @@ def warning_state(matches):
 
 def render_logo_brand():
     possible_paths = [
-        os.path.join("assets", "logoradar-logo.svg"),
+        os.path.join("assets", "logoradar.png"),
         os.path.join("assets", "logoradar-logo.png"),
         os.path.join("assets", "logoradar-logo.jpg"),
     ]
